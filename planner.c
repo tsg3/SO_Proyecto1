@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include "martian.c"
 
+int mode;
+
 int lcm(node_p* head) { 
     node_p* temp = head;
     int multiple = temp->Period;
@@ -46,7 +48,7 @@ int regen_energy(node_p* head) {
     return 0;
 }
 
-void give_turn(node_p* head, int i) {
+void give_turn_rms(node_p* head) {
     node_p* temp = head;
     while (temp != NULL) {
         if (temp->Current_Energy > 0) {
@@ -71,8 +73,41 @@ void give_turn(node_p* head, int i) {
         }
         temp = temp->Next_Process;
     }
-    turn = -1;
-    cycles = 0;
+}
+
+void give_turn_edf(node_p* head) {
+    node_p* temp = head;
+    int deadline = 0;
+    int min_deadline = 0;
+    int tmp_deadline = 0;
+    while (temp != NULL) {
+        tmp_deadline = current_cycle;
+        while (1) {
+            tmp_deadline++;
+            if (tmp_deadline % temp->Period == 0) {
+                break;
+            }
+        }
+        if (min_deadline == 0 || tmp_deadline <= min_deadline) {
+            min_deadline = tmp_deadline;
+        }
+        if ((deadline == 0 || deadline > tmp_deadline) && temp->Current_Energy > 0) {
+            turn = temp->Id;
+            deadline = tmp_deadline;
+        }
+        temp = temp->Next_Process;
+    }
+    if (deadline != 0) {
+        temp = head;
+        while (temp->Id != turn) {
+            temp = temp->Next_Process;
+        }
+        int final_deadline = (min_deadline < deadline) ? min_deadline : deadline;
+        cycles = final_deadline - current_cycle;
+        if (temp->Current_Energy <= final_deadline - current_cycle) {
+            cycles = temp->Current_Energy;
+        }
+    }
 }
 
 void close_threads() {
@@ -87,7 +122,7 @@ void close_threads() {
     }
 }
 
-void* plan_rm (void* vargp){
+void* planning (void* vargp){
     node_p* head = (node_p*)vargp;
     while (current_cycle < 19) {
         if (regen_energy(head) == -1) {
@@ -95,7 +130,12 @@ void* plan_rm (void* vargp){
             close_threads();
             return NULL;
         }
-        give_turn(head, current_cycle);
+        if (mode == 0) {
+            give_turn_rms(head);
+        }
+        else {
+            give_turn_edf(head);
+        }
         int temp_cycle = cycles;
         printf("Turn %d: ", current_cycle);
         if (turn != -1) {
@@ -125,9 +165,12 @@ int main() {
     /* INIT */
 
     node_p* head = NULL;
-    size_list = 3;
-    int times[] = {1, 2, 6}; 
-    int periods[] = {6, 9, 18}; 
+    // size_list = 3;
+    // int times[] = {1, 2, 6}; 
+    // int periods[] = {6, 9, 18}; 
+    size_list = 2;
+    int times[] = {3, 4}; 
+    int periods[] = {6, 9}; 
 
     for (int i = 0; i < size_list; i++) { 
         head = add_node(head, i, times[i], periods[i]);
@@ -136,7 +179,7 @@ int main() {
     /* Planner and threads */
 
     pthread_t* planner = (pthread_t*)malloc(sizeof(pthread_t));
-    pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * 3);
+    pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * size_list);
 
     /* Global variables */
 
@@ -146,6 +189,7 @@ int main() {
     multiple = lcm(head);
     executed = 0;
     current_cycle = 0;
+    mode = 0;
 
     /* Start threads */
     
@@ -155,15 +199,15 @@ int main() {
         temp = temp->Next_Process;
     }
 
-    pthread_create(planner, NULL, plan_rm, (void *) head);
+    pthread_create(planner, NULL, planning, (void *) head);
 
     /* Join threads */
-
-    pthread_join(*planner, NULL);
 
     for (int i = 0; i < size_list; i++) {
         pthread_join(*(threads + i), NULL);
     }
+
+    pthread_join(*planner, NULL);
 
     return 0;
 }
