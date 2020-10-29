@@ -3,13 +3,15 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "martian.c"
+#include "report.c"
 
-#define TIME 30 // Solo para testear
+#define TIME 18 // Solo para testear
 #define N 3 // Solo para testear
 
 int mode;
 int* Offsets;
 int Offsets_len;
+int manual;
 
 pthread_t* planner; 
 pthread_t* threads;
@@ -158,7 +160,7 @@ void* planning (void* vargp){
         if (current_cycle == multiple) {
             current_cycle = 0;
         }
-        if (happened == 0 && current_cycle == 6) { 
+        if (happened == 0 && current_cycle == 6 && manual == 1) { 
             /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
             (no deberia de estarlo) */
             update_offsets(current_cycle);
@@ -251,7 +253,8 @@ int main() {
     multiple = lcm(head);
     executed = 0;
     current_cycle = 0;
-    mode = 1; // Input del usuario
+    mode = 0; // Input del usuario
+    manual = 0; // Borrar
 
     /* Start threads */
     
@@ -271,5 +274,15 @@ int main() {
         pthread_join(*(threads + i), NULL);
     }
 
+    /* Show report */
+
+    show_report();
+
     return 0;
 }
+
+/*
+gcc planner.c -o planner -lpthread $(pkg-config allegro-5 allegro_font-5 --libs --cflags)
+
+./planner
+*/
