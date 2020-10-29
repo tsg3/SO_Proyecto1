@@ -5,7 +5,7 @@
 #include "martian.c"
 #include "report.c"
 
-#define TIME 20 // Solo para testear
+#define TIME 100 // Solo para testear
 #define N 3 // Solo para testear
 
 int mode;
@@ -132,7 +132,7 @@ void give_turn_edf(node_p* head) {
     }
 }
 
-void close_threads(node_p* head) {
+void close_threads(node_p* head, int end) {
     finished = 1;
     node_p* temp = head;
     while (temp != NULL) { 
@@ -142,6 +142,7 @@ void close_threads(node_p* head) {
         }
         pthread_mutex_lock(&lock_turn);
         turn = temp->Id;
+        set_end(turn, end);
         pthread_cond_broadcast(&cond_turn);
         pthread_mutex_unlock(&lock_turn);
         temp = temp->Next_Process;
@@ -171,29 +172,32 @@ void update_offsets(int offset) {
 
 void* planning (void* vargp){
     node_p* head = (node_p*)vargp;
-    int happened = 0;
     int i = 0;
     while (i < TIME) {
+
         if (current_cycle == multiple) {
             current_cycle = 0;
         }
-        if (happened == 0 && current_cycle == 6 && manual_insert == 1) { 
+
+        if (i == 6 && manual_insert == 1) { 
             /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
             (no deberia de estarlo) */
             update_offsets(current_cycle);
             current_cycle = 0;
             if (create_offset() == -1) {
                 printf("Couldn't create the new offset!\n");
-                close_threads(head);
+                close_threads(head, i);
                 return NULL;
             }
-            head = add_node(head, size_list, 2, 9, Offsets + Offsets_len - 1); 
+            head = add_node(head, size_list, 2, 9, Offsets + Offsets_len - 1);
+            add_data(size_list - 1, i, 2, 9);
+            proc_len++;
             // Los datos 2 (T) y 9 (P) deben ser extraidos del GUI
             multiple = lcm(head);
             pthread_t* threads_temp = (pthread_t*)realloc(threads, size_list);
             if (threads_temp == NULL) { 
                 printf("Couldn't create the new thread!\n");
-                close_threads(head);
+                close_threads(head, i);
                 return NULL;
             } 
             else {
@@ -204,26 +208,30 @@ void* planning (void* vargp){
                 temp = temp->Next_Process;
             }
             pthread_create(threads + size_list - 1, NULL, exec_thread, (void *) temp);
-            happened = 1;
+            manual_insert = 0;
         }
-        if (happened == 0 && current_cycle == 6 && manual_finish == -1) {
+
+        if (i == 6 && manual_finish == -1) {
             manual_finish = 0; // Borrar
-            happened = 1;
         }
+
         if (regen_energy(head) == -1) {
             printf("Couldn't find a way to schedule the processes!\n");
-            close_threads(head);
+            close_threads(head, i);
             return NULL;
         }
+
         if (mode == 0) {
             give_turn_rms(head);
         }
         else {
             give_turn_edf(head);
         }
+
         int temp_turn = turn;
         int temp_cycle = cycles;
         printf("Turn %d: ", current_cycle);
+
         if (turn != -1) {
             pthread_mutex_lock(&lock_turn);
             pthread_cond_broadcast(&cond_turn);
@@ -242,22 +250,27 @@ void* planning (void* vargp){
             }
             if (temp->State == 0) {
                 multiple = lcm(head);
+                set_end(temp->Id, i);
             }
+            add_executed_cycle(temp_turn, temp_cycle);
             usleep(25000);
         }
         else {
             printf("skipped!\n");
             current_cycle++;
             i++;
+            add_executed_cycle(-1, 1);
         }
     }
     printf("Calendarization ended!\n");
-    close_threads(head);
+    close_threads(head, i);
 }
 
 int main() {
 
     /* INIT */
+
+    srand(time(NULL)); // Para los random de report
 
     node_p* head = NULL;
     size_list = 0;
@@ -269,7 +282,9 @@ int main() {
 
     for (int i = 0; i < N; i++) { 
         head = add_node(head, i, times[i], periods[i], Offsets);
+        add_data(i, 0, times[i], periods[i]);
     }
+    proc_len = size_list;
 
     /* Planner and threads */
 
@@ -308,6 +323,7 @@ int main() {
 
     /* Show report */
 
+    mode_r = mode;
     show_report();
 
     return 0;
