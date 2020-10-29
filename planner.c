@@ -93,7 +93,7 @@ void give_turn_edf(node_p* head) {
         tmp_deadline = current_cycle;
         while (1) {
             tmp_deadline++;
-            if (tmp_deadline % temp->Period == 0) {
+            if ((tmp_deadline + *(temp->Offset)) % temp->Period == 0) {
                 break;
             }
         }
@@ -251,7 +251,7 @@ int main() {
     multiple = lcm(head);
     executed = 0;
     current_cycle = 0;
-    mode = 0; // Input del usuario
+    mode = 1; // Input del usuario
 
     /* Start threads */
     
