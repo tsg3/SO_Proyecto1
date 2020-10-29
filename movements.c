@@ -13,26 +13,23 @@ void move_marcian(MARCIAN *marcian)
         case 'u':
             marcian->pos_y -= 4;
             steps -= 1;
-            sleep(0.3);
             break;
         case 'd':
             marcian->pos_y += 4;
             steps -= 1;
-            sleep(0.3);
             break;
         case 'l':
             marcian->pos_x -= 4;
             steps -= 1;
-            sleep(0.3);
             break;
         case 'r':
             marcian->pos_x += 4;
             steps -= 1;
-            sleep(0.3);
             break;
         default:
             break;
         }
+        // sleep(time_pause);
     }
 }
 
