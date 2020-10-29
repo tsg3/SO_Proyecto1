@@ -130,7 +130,7 @@ void draw_window() {
     char str[10];
     int i = 0;
     while(i < lines) {
-        sprintf(str, "%d", i * 10);
+        sprintf(str, "%.1f", i * 0.5);
         al_draw_line(120 + i * 60 * scalar - slider, 30, 
             120 + i * 60 * scalar - slider, 60 + proc_len * 30, al_map_rgb(0, 0, 0), 1);
         al_draw_text(font, al_map_rgb(0, 0, 0), 
@@ -186,7 +186,7 @@ void draw_window() {
         temp = temp->Next_Cycle;
     }
 
-    al_draw_text(font, al_map_rgb(0, 0, 0), 320, 90 + proc_len * 30, 0, "Time");
+    al_draw_text(font, al_map_rgb(0, 0, 0), 306, 90 + proc_len * 30, 0, "Time (s)");
 
     al_draw_filled_rectangle(0, 0, 119, 210, al_map_rgb(255, 255, 255));
 
