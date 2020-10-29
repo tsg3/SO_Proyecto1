@@ -5,7 +5,7 @@
 #include "martian.c"
 #include "report.c"
 
-#define TIME 30 // Solo para testear
+#define TIME 20 // Solo para testear
 #define N 3 // Solo para testear
 
 int mode;
@@ -172,7 +172,8 @@ void update_offsets(int offset) {
 void* planning (void* vargp){
     node_p* head = (node_p*)vargp;
     int happened = 0;
-    for (int i = 0; i < TIME; i++) {
+    int i = 0;
+    while (i < TIME) {
         if (current_cycle == multiple) {
             current_cycle = 0;
         }
@@ -234,6 +235,7 @@ void* planning (void* vargp){
             executed = 0;
             pthread_mutex_unlock(&lock_exec);
             current_cycle += temp_cycle;
+            i += temp_cycle;
             node_p* temp = head;
             while (temp->Id != temp_turn) {
                 temp = temp->Next_Process;
@@ -246,6 +248,7 @@ void* planning (void* vargp){
         else {
             printf("skipped!\n");
             current_cycle++;
+            i++;
         }
     }
     printf("Calendarization ended!\n");
