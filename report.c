@@ -10,52 +10,74 @@ typedef struct Cycles {
     int Exec_Cycles;
     struct Cycles* Next_Cycle;
 } node_c;
-typedef struct Colors {
+typedef struct ProcData {
     int Id_Proc;
     int R;
     int G;
     int B;
-    struct Colors* Next_Color;
-} color;
+    int Start;
+    int Time;
+    int End;
+    int Period;
+    struct ProcData* Next_Data;
+} proc_data;
 node_c* Cycles_Head = NULL;
-color* Color_Head = NULL;
+proc_data* Data_Head = NULL;
 int Cycles_Count = 0;
 
 int generate_random() {
     return rand() % 256; 
 }
 
-void add_color(int id) {
+void add_data(int id, int start, int time, int period) {
     if (id != -1) {
-        if (Color_Head == NULL) {
-            Color_Head = (color*)malloc(sizeof(color));
-            Color_Head->Id_Proc = id;
-            Color_Head->R = generate_random(); 
-            Color_Head->G = generate_random(); 
-            Color_Head->B = generate_random(); 
-            Color_Head->Next_Color = NULL;
+        if (Data_Head == NULL) {
+            Data_Head = (proc_data*)malloc(sizeof(proc_data));
+            Data_Head->Id_Proc = id;
+            Data_Head->R = generate_random(); 
+            Data_Head->G = generate_random(); 
+            Data_Head->B = generate_random(); 
+            Data_Head->Start = start;
+            Data_Head->Time = time;
+            Data_Head->Period = period;
+            Data_Head->End = 0;
+            Data_Head->Next_Data = NULL;
         }
         else {
-            color* temp = Color_Head;
-            while (temp->Next_Color != NULL) {
+            proc_data* temp = Data_Head;
+            while (temp->Next_Data != NULL) {
                 if (temp->Id_Proc == id) {
                     return;
                 }
-                temp = temp->Next_Color;
+                temp = temp->Next_Data;
             }
             if (temp->Id_Proc == id) {
                 return;
             }
-            color* new_node = (color*)malloc(sizeof(color));
+            proc_data* new_node = (proc_data*)malloc(sizeof(proc_data));
             new_node->Id_Proc = id;
             new_node->R = generate_random(); 
             new_node->G = generate_random(); 
             new_node->B = generate_random(); 
-            new_node->Next_Color = NULL;
-            temp->Next_Color = new_node;
+            new_node->Start = start;
+            new_node->Time = time;
+            new_node->Period = period;
+            new_node->End = 0;
+            new_node->Next_Data = NULL;
+            temp->Next_Data = new_node;
         }
     }
 }
+
+void set_end (int id, int end) {
+    proc_data* temp_data = Data_Head;
+    while (temp_data->Id_Proc != id) {
+        temp_data = temp_data->Next_Data;
+    }
+    temp_data->End = end;
+}
+
+int proc_len = 0;
 
 void add_executed_cycle(int id, int cycles) {
     Cycles_Count += cycles;
@@ -76,12 +98,10 @@ void add_executed_cycle(int id, int cycles) {
         new_node->Next_Cycle = NULL;
         temp->Next_Cycle = new_node;
     }
-    add_color(id);
 }
 
 ALLEGRO_FONT* font;
-int proc_len = 3;
-int mode = 0;
+int mode_r;
 int slider = 0;
 int slider_state = 0;
 int lines;
@@ -92,7 +112,7 @@ float total_length;
 void draw_window() {
     al_clear_to_color(al_map_rgb(255, 255, 255));
     total_length = ((float) lines - 1.0) * 60 * scalar;
-    if (slider_state == 1 && total_length - slider > 500) {
+    if (slider_state == 1 && total_length - slider > 480) {
         slider += 2;
     }
     else if (slider_state == -1 && slider > 1) {
@@ -110,38 +130,63 @@ void draw_window() {
     char str[10];
     int i = 0;
     while(i < lines) {
-        sprintf(str, "%d", i * 10);
+        sprintf(str, "%.1f", i * 0.5);
         al_draw_line(120 + i * 60 * scalar - slider, 30, 
-            120 + i * 60 * scalar - slider, 150, al_map_rgb(0, 0, 0), 1);
+            120 + i * 60 * scalar - slider, 60 + proc_len * 30, al_map_rgb(0, 0, 0), 1);
         al_draw_text(font, al_map_rgb(0, 0, 0), 
-            120 + i * 60 * scalar - slider, 150, 0, str);
+            120 + i * 60 * scalar - slider, 60 + proc_len * 30, 0, str);
         i++;
     }
 
+    proc_data* data_temp = Data_Head;
+    int x = 0;
+    int length;
+    while (data_temp != NULL) {
+        x = data_temp->Start * 6;
+        length = data_temp->End * 6;
+        while (x < length) {
+            al_draw_filled_rectangle(120 - slider + x * scalar, 
+                35 + (data_temp->Id_Proc) * 30, 
+                120 - slider + (x + data_temp->Time * 6) * scalar, 
+                55 + (data_temp->Id_Proc) * 30, 
+                al_map_rgb(data_temp->R, data_temp->G, data_temp->B));
+            al_draw_rectangle(120 - slider + x * scalar, 
+                35 + (data_temp->Id_Proc) * 30, 
+                120 - slider + (x + data_temp->Time * 6) * scalar, 
+                55 + (data_temp->Id_Proc) * 30, 
+                al_map_rgb(0, 0, 0), 1);
+            x += data_temp->Period * 6;
+        }
+        data_temp = data_temp->Next_Data;
+    }
+
     node_c* temp = Cycles_Head;
-    color* color_temp = Color_Head;
     int previous_x = 0;
     while (temp != NULL) {
         if (temp->Id_Proc != -1) {
-            color_temp = Color_Head;
-            while (color_temp != NULL) {
-                if (color_temp->Id_Proc == temp->Id_Proc) {
+            data_temp = Data_Head;
+            while (data_temp != NULL) {
+                if (data_temp->Id_Proc == temp->Id_Proc) {
                     break;
                 }
-                color_temp = color_temp->Next_Color;
+                data_temp = data_temp->Next_Data;
             }
-            al_draw_filled_rectangle(120 - slider + previous_x * scalar, 125, 
-                120 - slider + (previous_x + temp->Exec_Cycles * 6) * scalar, 145, 
-                al_map_rgb(color_temp->R, color_temp->G, color_temp->B));
-            al_draw_rectangle(120 - slider + previous_x * scalar, 125, 
-                120 - slider + (previous_x + temp->Exec_Cycles * 6) * scalar, 145, 
+            al_draw_filled_rectangle(120 - slider + previous_x * scalar, 
+                35 + proc_len * 30, 
+                120 - slider + (previous_x + temp->Exec_Cycles * 6) * scalar, 
+                55 + proc_len * 30, 
+                al_map_rgb(data_temp->R, data_temp->G, data_temp->B));
+            al_draw_rectangle(120 - slider + previous_x * scalar, 
+                35 + proc_len * 30, 
+                120 - slider + (previous_x + temp->Exec_Cycles * 6) * scalar, 
+                55 + proc_len * 30 , 
                 al_map_rgb(0, 0, 0), 1);
         }
         previous_x += temp->Exec_Cycles * 6;
         temp = temp->Next_Cycle;
     }
 
-    al_draw_text(font, al_map_rgb(0, 0, 0), 320, 210, 0, "Time");
+    al_draw_text(font, al_map_rgb(0, 0, 0), 306, 90 + proc_len * 30, 0, "Time (s)");
 
     al_draw_filled_rectangle(0, 0, 119, 210, al_map_rgb(255, 255, 255));
 
@@ -154,7 +199,7 @@ void draw_window() {
         i++;
     }
 
-    if (mode == 0) {
+    if (mode_r == 0) {
         al_draw_text(font, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, "RMS");
     }
     else {
@@ -166,12 +211,13 @@ void draw_window() {
 
 void show_report() {
     /* Eliminar */
-    srand(time(NULL));
-    int cycles_ids[] = {0, 1, 2, 0, 2, 1, 2, 0, -1, -1, -1, -1, -1, 0, 1};
+    // srand(time(NULL));
+    /*int cycles_ids[] = {0, 1, 2, 0, 2, 1, 2, 0, -1, -1, -1, -1, -1, 0, 1};
     int cycles_num[] = {1, 2, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2};
     for (int i = 0; i < 15; i++) {
         add_executed_cycle(cycles_ids[i], cycles_num[i]);
-    }
+    }*/
+
     lines = Cycles_Count;
     while (lines % 10 != 0) {
         lines++;
