@@ -23,9 +23,11 @@ typedef struct Process {
     int Current_Energy;
     int Period;
     struct Process* Next_Process;
+    int* Offset;
 } node_p;
 
-node_p* add_node(node_p* head, int id, int energy, int period) {
+node_p* add_node(node_p* head, int id, int energy, int period, int* offset) {
+    size_list++;
     if (head == NULL) {
         head = (node_p*)malloc(sizeof(node_p));
         head->Id = id;
@@ -33,6 +35,7 @@ node_p* add_node(node_p* head, int id, int energy, int period) {
         head->Current_Energy = 0;
         head->Period = period;
         head->Next_Process = NULL;
+        head->Offset = offset;
         return head;
     }
     else if (period <= head->Period) {
@@ -42,6 +45,7 @@ node_p* add_node(node_p* head, int id, int energy, int period) {
         new_head->Current_Energy = 0;
         new_head->Period = period;
         new_head->Next_Process = head;
+        new_head->Offset = offset;
         return new_head;
     }
     else {
@@ -58,6 +62,7 @@ node_p* add_node(node_p* head, int id, int energy, int period) {
         new_node->Current_Energy = 0;
         new_node->Period = period;
         new_node->Next_Process = temp->Next_Process;
+        new_node->Offset = offset;
         temp->Next_Process = new_node;
         return head;
     }
@@ -92,8 +97,6 @@ void* exec_thread(void* vargp) {
         }
         turn = -1;
         int temp_cycles = cycles;
-        // proc->Current_Energy--;
-        // cycles = 0;
         while (cycles > 0) {
             proc->Current_Energy--;
             cycles--;
