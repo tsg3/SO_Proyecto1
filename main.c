@@ -1,21 +1,6 @@
-#include <stdio.h>
-#include <allegro5/allegro5.h>
-#include <allegro5/allegro_font.h>
-#include <allegro5/allegro_image.h>
-#include <unistd.h>
-#include "standard.h"
+#include "movements.c"
 
-ALLEGRO_BITMAP *background;
-ALLEGRO_BITMAP *rock;
-MARCIAN marcians[3];
-ALLEGRO_EVENT event;
-int steps;
-int imageWidth;
-int imageHeight;
-int current_x;
-int current_y;
-
-void draw_background()
+void draw_background_game()
 {
     for (int i = 0; i < 17; i++)
     {
@@ -31,37 +16,217 @@ void draw_background()
             }
         }
     }
+
+    char energy_number[3];
+    char period_number[3];
+    sprintf(energy_number, "%d", new_energy);
+    sprintf(period_number, "%d", new_period);
+
+    float x_center = 544 + (window_width - 544) / 2.0f;
+
+    // Title game mode
+    al_draw_bitmap(marcian_image, x_center - 32, window_height / 2.0f - 40 * 4 - 72, 0);
+    if (game_mode == 'a')
+    {
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(a_mode), window_height / 2.0f - 30 * 4, 0, a_mode);
+    }
+    else
+    {
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(m_mode), window_height / 2.0f - 30 * 4, 0, m_mode);
+    }
+
+    if (game_mode == 'm')
+    {
+        // Guide
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(modify_values_text), window_height / 2.0f + 30 * 4, 0, modify_values_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(up_down_text), window_height / 2.0f + 30 * 4 + 10, 0, up_down_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(r_l_text), window_height / 2.0f + 30 * 4 + 20, 0, r_l_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(add_space), window_height / 2.0f + 30 * 4 + 40, 0, add_space);
+
+        // Energy and period text
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(energy_text) - 10, window_height / 2.0f, 0, energy_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(energy_number) + 10, window_height / 2.0f, 0, energy_number);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(period_text) - 10, window_height / 2.0f + 10 * 4, 0, period_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(period_number) + 10, window_height / 2.0f + 10 * 4, 0, period_number);
+    }
+
+    // Finish
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(finish_text), window_height / 2.0f + 30 * 4 + 55, 0, finish_text);
 }
 
-void move_marcian(MARCIAN *marcian)
+void draw_marcians()
 {
-    if (marcian->energy > 0 && steps > 0)
+    for (int i = 0; i < lenght; i++)
     {
-        int pos_x = marcian->pos_x / 32;
-        int pos_y = marcian->pos_y / 32;
-        printf("Energy: %d, address: %c, marcian: %d\n", marcian->energy, marcian->direction, marcian->id);
-        printf("Marcian: (%d, %d); Current(%d, %d)\n", pos_x, pos_y, current_x, current_y);
-        switch (marcian->direction)
+        al_draw_scaled_bitmap(marcian_image, 0, 0, imageWidth, imageHeight, marcians[i].pos_x, marcians[i].pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
+    }
+}
+
+void draw_menu()
+{
+
+    float x_center = window_width / 2.0f;
+
+    al_draw_bitmap(marcian_image, x_center - 32, window_height / 2.0f - 20 * 4 - 72, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(title), window_height / 2.0f - 20 * 4, 0, title);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(a_mode_guide), window_height / 2.0f, 0, a_mode_guide);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(m_mode_guide), window_height / 2.0f + 10 * 4, 0, m_mode_guide);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(exit_text), window_height / 2.0f + 30 * 4 + 55, 0, exit_text);
+}
+
+void draw_automatic_menu()
+{
+    char energy_number[3];
+    char period_number[3];
+    float x_center = window_width / 2.0f;
+    sprintf(energy_number, "%d", new_energy);
+    sprintf(period_number, "%d", new_period);
+
+    al_draw_bitmap(marcian_image, window_width / 2.0f - 32, window_height / 2.0f - 20 * 4 - 72, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), window_width / 2.0f - 4 * sizeof(add_marcian_text), window_height / 2.0f - 20 * 4, 0, add_marcian_text);
+
+    // Guide
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(modify_values_text), window_height / 2.0f + 30 * 4, 0, modify_values_text);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(up_down_text), window_height / 2.0f + 30 * 4 + 10, 0, up_down_text);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(r_l_text), window_height / 2.0f + 30 * 4 + 20, 0, r_l_text);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(start_space), window_height / 2.0f + 30 * 4 + 40, 0, start_space);
+
+    // Energy and period text
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(energy_text) - 10, window_height / 2.0f, 0, energy_text);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(energy_number) + 10, window_height / 2.0f, 0, energy_number);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(period_text) - 10, window_height / 2.0f + 10 * 4, 0, period_text);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(exit_text), window_height / 2.0f + 30 * 4 + 55, 0, exit_text);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(period_number) + 10, window_height / 2.0f + 10 * 4, 0, period_number);
+}
+
+void initialize_variables()
+{
+
+    // Window size
+    window_height = 544;
+    window_width = 832;
+    lenght = 0;
+
+    timer = al_create_timer(1.0 / 30.0);
+    queue = al_create_event_queue();
+    disp = al_create_display(window_width, window_height);
+    font = al_create_builtin_font();
+    // Carga sprite
+    if (!al_init_image_addon())
+    {
+        printf("couldn't initialize image addon\n");
+        exit(1);
+    }
+    marcian_image = al_load_bitmap("assets/marcian2/marcian00.png");
+    background = al_load_bitmap("assets/background.png");
+    rock = al_load_bitmap("assets/rock.png");
+
+    if (!marcian_image || !background)
+    {
+        printf("couldn't load mysha\n");
+        exit(1);
+    }
+
+    float scale = 0.5;
+
+    steps = 8;
+
+    imageWidth = al_get_bitmap_width(marcian_image);
+    imageHeight = al_get_bitmap_height(marcian_image);
+
+    current_window = 'm';
+    running = true;
+    new_energy = 0;
+    new_period = 0;
+}
+
+void add_new_marcian()
+{
+    if (new_energy != 0 && new_period != 0)
+    {
+        if (new_energy < new_period)
         {
-        case 'u':
-            marcian->pos_y -= 4;
-            steps -= 1;
-            sleep(0.3);
+            marcians[lenght] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = new_energy, .period = new_period, .direction = 'c'};
+            lenght++;
+            printf("New marcian added with energy: %d and period: %d\n", new_energy, new_period);
+            new_period = 0;
+            new_energy = 0;
+        }
+    }
+    else
+    {
+        printf("Energy and period must be greater than zero\n");
+    }
+}
+
+void validate_key()
+{
+    if (event.type == ALLEGRO_EVENT_KEY_DOWN)
+    {
+        switch (event.keyboard.keycode)
+        {
+        case ALLEGRO_KEY_X:
+            if (current_window == 'g')
+                current_window = 'r';
+            else
+                running = false;
             break;
-        case 'd':
-            marcian->pos_y += 4;
-            steps -= 1;
-            sleep(0.3);
+
+        case ALLEGRO_KEY_A:
+            if (current_window == 'm')
+                current_window = 'a';
+            else if (current_window == 'a')
+                add_new_marcian();
             break;
-        case 'l':
-            marcian->pos_x -= 4;
-            steps -= 1;
-            sleep(0.3);
+
+        case ALLEGRO_KEY_S:
+            if (current_window == 'm')
+            {
+                current_window = 'g';
+                game_mode = 'm';
+                printf("Current mode manual mode: %c\n", game_mode);
+            }
             break;
-        case 'r':
-            marcian->pos_x += 4;
-            steps -= 1;
-            sleep(0.3);
+        case ALLEGRO_KEY_SPACE:
+            if (current_window == 'a')
+            {
+                if (lenght > 0)
+                {
+                    current_window = 'g';
+                    game_mode = 'a';
+                }
+            }
+            else if (current_window == 'g' && game_mode == 'm')
+            {
+                printf("Current mode manual\n");
+                add_new_marcian();
+            }
+            break;
+        case ALLEGRO_KEY_UP:
+            if ((game_mode == 'm' && current_window == 'g') || current_window == 'a')
+            {
+                new_period++;
+            }
+            break;
+        case ALLEGRO_KEY_DOWN:
+            if ((game_mode == 'm' && current_window == 'g') || current_window == 'a')
+            {
+                if (new_period > 0)
+                    new_period--;
+            }
+            break;
+        case ALLEGRO_KEY_RIGHT:
+            if ((game_mode == 'm' && current_window == 'g') || current_window == 'a')
+            {
+                new_energy++;
+            }
+            break;
+        case ALLEGRO_KEY_LEFT:
+            if ((game_mode == 'm' && current_window == 'g') || current_window == 'a')
+            {
+                if (new_energy > 0)
+                    new_energy--;
+            }
             break;
         default:
             break;
@@ -69,128 +234,13 @@ void move_marcian(MARCIAN *marcian)
     }
 }
 
-bool check_movement(MARCIAN *marcian, char movement)
-{
-
-    // printf("x: %f, y: %f\n", marcian->pos_x, marcian->pos_y);
-    int pos_y;
-    int pos_x;
-    switch (movement)
-    {
-    case 'u':
-        if (marcian->pos_y - 4 > 0)
-        {
-            pos_y = (marcian->pos_y - 4) / 32;
-            pos_x = marcian->pos_x / 32;
-        }
-        break;
-    case 'd':
-        if (marcian->pos_y + 4 < 544)
-        {
-            pos_y = (marcian->pos_y + 32 + 4) / 32;
-            pos_x = marcian->pos_x / 32;
-        }
-        break;
-    case 'l':
-        if (marcian->pos_x - 32 > 0)
-        {
-            printf("Posición en x: %f\n", marcian->pos_x - 32);
-            pos_y = marcian->pos_y / 32;
-            pos_x = (marcian->pos_x - 4) / 32;
-        }
-        break;
-    case 'r':
-        if (marcian->pos_x + 4 < 544)
-        {
-            pos_y = marcian->pos_y / 32;
-            pos_x = (marcian->pos_x + 32 + 4) / 32;
-        }
-        break;
-    }
-    if (pos_y >= 0 && pos_y <= 544 && pos_x >= 0 && pos_x <= 544)
-    {
-        if (maze[pos_y][pos_x] == movement || maze[pos_y][pos_x] == 'f')
-        {
-            current_x = marcian->pos_x / 32;
-            current_y = marcian->pos_y / 32;
-
-            maze[pos_y][pos_x] = movement;
-            maze[current_y][current_x] = 'f';
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    } else {
-        return false;
-    }
-}
-
-void set_address(MARCIAN *marcian)
-{
-    srand(time(NULL));
-    int pos;
-    char next;
-
-    while (true)
-    {
-        pos = rand() % 4;
-        next = addresses[pos];
-        // printf("Random pos: %d, next: %c", pos, next);
-        if (check_movement(marcian, next))
-        {
-            marcian->direction = next;
-            break;
-        }
-    }
-}
-
-void make_movement(MARCIAN *marcian)
-{
-    int pos_x = marcian->pos_x / 32;
-    int pos_y = marcian->pos_y / 32;
-    printf("ID: %d, Address: %c\n", marcian->id, marcian->direction);
-    if (marcian->direction == 'c' || pos_x != current_x || pos_y != current_y)
-    {
-
-        if (marcian->direction != 'c' && check_movement(marcian, marcian->direction))
-        {
-            move_marcian(marcian);
-        }
-        else
-        {
-            set_address(marcian);
-            move_marcian(marcian);
-        }
-    }
-    else
-    {
-        move_marcian(marcian);
-    }
-}
-
-void draw_marcians(ALLEGRO_BITMAP *marcian)
-{
-    for (int i = 0; i < 3; i++)
-    {
-        al_draw_scaled_bitmap(marcian, 0, 0, imageWidth, imageHeight, marcians[i].pos_x, marcians[i].pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
-    }
-}
-
-void set_cell_maze(MARCIAN *marcian)
-{
-}
-
 int main()
 {
     al_init();
     al_install_keyboard();
 
-    ALLEGRO_TIMER *timer = al_create_timer(1.0 / 30.0);
-    ALLEGRO_EVENT_QUEUE *queue = al_create_event_queue();
-    ALLEGRO_DISPLAY *disp = al_create_display(640, 544);
-    ALLEGRO_FONT *font = al_create_builtin_font();
+    // Inicializar las variables
+    initialize_variables();
 
     al_register_event_source(queue, al_get_keyboard_event_source());
     al_register_event_source(queue, al_get_display_event_source(disp));
@@ -198,38 +248,12 @@ int main()
 
     bool redraw = true;
 
-    // Carga sprite
-    if (!al_init_image_addon())
-    {
-        printf("couldn't initialize image addon\n");
-        return 1;
-    }
-
-    ALLEGRO_BITMAP *marcian_image = al_load_bitmap("assets/marcian2/marcian00.png");
-    background = al_load_bitmap("assets/background.png");
-    rock = al_load_bitmap("assets/rock.png");
-
-    if (!marcian_image || !background)
-    {
-        printf("couldn't load mysha\n");
-        return 1;
-    }
-
-    float scale = 0.5;
-
-    marcians[0] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = 4, .period = 9, .direction = 'c'};
-    marcians[1] = (MARCIAN){.id = 2, .pos_x = 32, .pos_y = 32, .energy = 4, .period = 9, .direction = 'c'};
-    marcians[2] = (MARCIAN){.id = 3, .pos_x = 32, .pos_y = 32, .energy = 4, .period = 9, .direction = 'c'};
-
-    int current = 0;
-    steps = 8;
-
-    imageWidth = al_get_bitmap_width(marcian_image);
-    imageHeight = al_get_bitmap_height(marcian_image);
-
     al_start_timer(timer);
+    // Marcian manager
+    int current_marcian = 0;
 
-    while (1)
+    // Game loop
+    while (running)
     {
 
         al_wait_for_event(queue, &event);
@@ -237,31 +261,53 @@ int main()
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             break;
 
-        make_movement(&marcians[current]);
+        al_clear_to_color(al_map_rgb(0, 0, 0));
 
-        al_clear_to_color(al_map_rgb(185, 75, 36));
+        validate_key();
 
-        draw_background();
-        draw_marcians(marcian_image);
-        if (steps == 0)
+        if (current_window == 'm')
+            draw_menu();
+
+        else if (current_window == 'a')
         {
-            marcians[current].energy--;
-            marcians[current].direction = 'c';
-            steps = 8;
+            draw_automatic_menu();
         }
-        if (marcians[current].energy == 0)
+        else if (current_window == 'g')
         {
-            marcians[current].energy = 4;
-            current++;
+
+            draw_background_game();
+
+            if (lenght > 0)
+            {
+                make_movement(&marcians[current_marcian]);
+
+                draw_marcians(marcian_image);
+
+                // Validaciones temporales
+                if (steps == 0)
+                {
+                    marcians[current_marcian].energy--;
+                    marcians[current_marcian].direction = 'c';
+                    steps = 8;
+                }
+                if (marcians[current_marcian].energy == 0)
+                {
+                    marcians[current_marcian].energy = 4;
+                    current_marcian++;
+                    if (current_marcian >= lenght)
+                        current_marcian = 0;
+                }
+                if (current_marcian == lenght)
+                    current_marcian = 0;
+            }
         }
-        if (current == 3)
-            current = 0;
 
         al_flip_display();
     }
 
     al_destroy_bitmap(marcian_image);
     al_destroy_bitmap(background);
+    al_destroy_bitmap(rock);
     al_destroy_font(font);
     al_destroy_display(disp);
     al_destroy_timer(timer);
