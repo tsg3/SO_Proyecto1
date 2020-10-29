@@ -2,15 +2,20 @@
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
+#include <unistd.h>
 #include "standard.h"
 
 ALLEGRO_BITMAP *background;
 ALLEGRO_BITMAP *rock;
-MARCIAN marcian1 = {0, 32, 3, 7, 'c'};
-;
+MARCIAN marcians[3];
 ALLEGRO_EVENT event;
+int steps;
+int imageWidth;
+int imageHeight;
+int current_x;
+int current_y;
 
-void print_background()
+void draw_background()
 {
     for (int i = 0; i < 17; i++)
     {
@@ -28,80 +33,153 @@ void print_background()
     }
 }
 
-void move_marcian()
+void move_marcian(MARCIAN *marcian)
 {
-
-    if (event.type == ALLEGRO_EVENT_KEY_DOWN)
+    if (marcian->energy > 0 && steps > 0)
     {
-        printf("x: %f, y: %f\n", marcian1.pos_x, marcian1.pos_y);
-        switch (event.keyboard.keycode)
+        int pos_x = marcian->pos_x / 32;
+        int pos_y = marcian->pos_y / 32;
+        printf("Energy: %d, address: %c, marcian: %d\n", marcian->energy, marcian->direction, marcian->id);
+        printf("Marcian: (%d, %d); Current(%d, %d)\n", pos_x, pos_y, current_x, current_y);
+        switch (marcian->direction)
         {
-        case ALLEGRO_KEY_UP:
-            if (marcian1.pos_y - 4 > 0)
-            {
-                int pos_y = (marcian1.pos_y - 4) / 32;
-                int pos_x = marcian1.pos_x / 32;
-                int pos_x_l = (marcian1.pos_x + 32) / 32;
-                if (maze[pos_y][pos_x] != 'o' && maze[pos_y][pos_x_l] != 'o')
-                {
-                    marcian1.pos_y -= 4;
-                }
-                else
-                {
-                    printf("Can't make this movement to Up ");
-                }
-            }
+        case 'u':
+            marcian->pos_y -= 4;
+            steps -= 1;
+            sleep(0.3);
             break;
-        case ALLEGRO_KEY_DOWN:
-            if (marcian1.pos_y + 4 < 544)
-            {
-                int pos_y = (marcian1.pos_y + 32 + 4) / 32;
-                int pos_x = marcian1.pos_x / 32;
-                int pos_x_l = (marcian1.pos_x + 32) / 32;
-                if (maze[pos_y][pos_x] != 'o' && maze[pos_y][pos_x_l] != 'o')
-                {
-                    marcian1.pos_y += 4;
-                }
-                else
-                {
-                    printf("Can't make this movement to Down");
-                }
-            }
+        case 'd':
+            marcian->pos_y += 4;
+            steps -= 1;
+            sleep(0.3);
             break;
-        case ALLEGRO_KEY_LEFT:
-            if (marcian1.pos_x - 4 > 0)
-            {
-                int pos_y = marcian1.pos_y / 32;
-                int pos_x = (marcian1.pos_x - 4) / 32;
-                int pos_y_d = (marcian1.pos_y + 32) / 32;
-                if (maze[pos_y][pos_x] != 'o' && maze[pos_y_d][pos_x] != 'o')
-                {
-                    marcian1.pos_x -= 4;
-                }
-                else
-                {
-                    printf("Can't make this movement to Left");
-                }
-            }
+        case 'l':
+            marcian->pos_x -= 4;
+            steps -= 1;
+            sleep(0.3);
             break;
-        case ALLEGRO_KEY_RIGHT:
-            if (marcian1.pos_x - 4 < 544)
-            {
-                int pos_y = marcian1.pos_y / 32;
-                int pos_x = (marcian1.pos_x + 32 + 4) / 32;
-                int pos_y_d = (marcian1.pos_y + 32) / 32;
-                if (maze[pos_y][pos_x] != 'o' && maze[pos_y_d][pos_x] != 'o')
-                {
-                    marcian1.pos_x += 4;
-                }
-                else
-                {
-                    printf("Can't make this movement to Right");
-                }
-            }
+        case 'r':
+            marcian->pos_x += 4;
+            steps -= 1;
+            sleep(0.3);
+            break;
+        default:
             break;
         }
     }
+}
+
+bool check_movement(MARCIAN *marcian, char movement)
+{
+
+    // printf("x: %f, y: %f\n", marcian->pos_x, marcian->pos_y);
+    int pos_y;
+    int pos_x;
+    switch (movement)
+    {
+    case 'u':
+        if (marcian->pos_y - 4 > 0)
+        {
+            pos_y = (marcian->pos_y - 4) / 32;
+            pos_x = marcian->pos_x / 32;
+        }
+        break;
+    case 'd':
+        if (marcian->pos_y + 4 < 544)
+        {
+            pos_y = (marcian->pos_y + 32 + 4) / 32;
+            pos_x = marcian->pos_x / 32;
+        }
+        break;
+    case 'l':
+        if (marcian->pos_x - 32 > 0)
+        {
+            printf("Posición en x: %f\n", marcian->pos_x - 32);
+            pos_y = marcian->pos_y / 32;
+            pos_x = (marcian->pos_x - 4) / 32;
+        }
+        break;
+    case 'r':
+        if (marcian->pos_x + 4 < 544)
+        {
+            pos_y = marcian->pos_y / 32;
+            pos_x = (marcian->pos_x + 32 + 4) / 32;
+        }
+        break;
+    }
+    if (pos_y >= 0 && pos_y <= 544 && pos_x >= 0 && pos_x <= 544)
+    {
+        if (maze[pos_y][pos_x] == movement || maze[pos_y][pos_x] == 'f')
+        {
+            current_x = marcian->pos_x / 32;
+            current_y = marcian->pos_y / 32;
+
+            maze[pos_y][pos_x] = movement;
+            maze[current_y][current_x] = 'f';
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+void set_address(MARCIAN *marcian)
+{
+    srand(time(NULL));
+    int pos;
+    char next;
+
+    while (true)
+    {
+        pos = rand() % 4;
+        next = addresses[pos];
+        // printf("Random pos: %d, next: %c", pos, next);
+        if (check_movement(marcian, next))
+        {
+            marcian->direction = next;
+            break;
+        }
+    }
+}
+
+void make_movement(MARCIAN *marcian)
+{
+    int pos_x = marcian->pos_x / 32;
+    int pos_y = marcian->pos_y / 32;
+    printf("ID: %d, Address: %c\n", marcian->id, marcian->direction);
+    if (marcian->direction == 'c' || pos_x != current_x || pos_y != current_y)
+    {
+
+        if (marcian->direction != 'c' && check_movement(marcian, marcian->direction))
+        {
+            move_marcian(marcian);
+        }
+        else
+        {
+            set_address(marcian);
+            move_marcian(marcian);
+        }
+    }
+    else
+    {
+        move_marcian(marcian);
+    }
+}
+
+void draw_marcians(ALLEGRO_BITMAP *marcian)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        al_draw_scaled_bitmap(marcian, 0, 0, imageWidth, imageHeight, marcians[i].pos_x, marcians[i].pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
+    }
+}
+
+void set_cell_maze(MARCIAN *marcian)
+{
 }
 
 int main()
@@ -127,11 +205,11 @@ int main()
         return 1;
     }
 
-    ALLEGRO_BITMAP *marcian = al_load_bitmap("assets/marcian2/marcian00.png");
+    ALLEGRO_BITMAP *marcian_image = al_load_bitmap("assets/marcian2/marcian00.png");
     background = al_load_bitmap("assets/background.png");
     rock = al_load_bitmap("assets/rock.png");
 
-    if (!marcian || !background)
+    if (!marcian_image || !background)
     {
         printf("couldn't load mysha\n");
         return 1;
@@ -139,31 +217,50 @@ int main()
 
     float scale = 0.5;
 
-    int imageWidth = al_get_bitmap_width(marcian);
-    int imageHeight = al_get_bitmap_height(marcian);
+    marcians[0] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = 4, .period = 9, .direction = 'c'};
+    marcians[1] = (MARCIAN){.id = 2, .pos_x = 32, .pos_y = 32, .energy = 4, .period = 9, .direction = 'c'};
+    marcians[2] = (MARCIAN){.id = 3, .pos_x = 32, .pos_y = 32, .energy = 4, .period = 9, .direction = 'c'};
+
+    int current = 0;
+    steps = 8;
+
+    imageWidth = al_get_bitmap_width(marcian_image);
+    imageHeight = al_get_bitmap_height(marcian_image);
 
     al_start_timer(timer);
+
     while (1)
     {
-    
+
         al_wait_for_event(queue, &event);
 
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             break;
-       
-        move_marcian();
+
+        make_movement(&marcians[current]);
 
         al_clear_to_color(al_map_rgb(185, 75, 36));
 
-        // Pintando el laberinto
-        print_background();
-
-        al_draw_scaled_bitmap(marcian, 0, 0, imageWidth, imageHeight, marcian1.pos_x, marcian1.pos_y, imageWidth * scale, imageHeight * scale, 0);
+        draw_background();
+        draw_marcians(marcian_image);
+        if (steps == 0)
+        {
+            marcians[current].energy--;
+            marcians[current].direction = 'c';
+            steps = 8;
+        }
+        if (marcians[current].energy == 0)
+        {
+            marcians[current].energy = 4;
+            current++;
+        }
+        if (current == 3)
+            current = 0;
 
         al_flip_display();
     }
 
-    al_destroy_bitmap(marcian);
+    al_destroy_bitmap(marcian_image);
     al_destroy_bitmap(background);
     al_destroy_font(font);
     al_destroy_display(disp);
