@@ -17,6 +17,9 @@ pthread_t* planner;
 pthread_t* threads;
 
 int lcm(node_p* head) { 
+    if (head == NULL) {
+        return 0;
+    }
     node_p* temp = head;
     while (temp->State == 0) {
         temp = temp->Next_Process;
@@ -287,7 +290,6 @@ int main() {
     proc_len = size_list;
 
     /* Planner and threads */
-
     planner = (pthread_t*)malloc(sizeof(pthread_t));
     threads = (pthread_t*)malloc(sizeof(pthread_t) * size_list);
 
@@ -310,7 +312,7 @@ int main() {
         pthread_create(threads + i, NULL, exec_thread, (void *) temp);
         temp = temp->Next_Process;
     }
-
+    
     pthread_create(planner, NULL, planning, (void *) head);
 
     /* Join threads */
