@@ -15,6 +15,8 @@ int finished;
 int multiple;
 int executed;
 
+int manual_finish;
+
 int size_list;
 
 typedef struct Process {
@@ -24,6 +26,7 @@ typedef struct Process {
     int Period;
     struct Process* Next_Process;
     int* Offset;
+    int State;
 } node_p;
 
 node_p* add_node(node_p* head, int id, int energy, int period, int* offset) {
@@ -36,6 +39,7 @@ node_p* add_node(node_p* head, int id, int energy, int period, int* offset) {
         head->Period = period;
         head->Next_Process = NULL;
         head->Offset = offset;
+        head->State = 1;
         return head;
     }
     else if (period <= head->Period) {
@@ -46,6 +50,7 @@ node_p* add_node(node_p* head, int id, int energy, int period, int* offset) {
         new_head->Period = period;
         new_head->Next_Process = head;
         new_head->Offset = offset;
+        new_head->State = 1;
         return new_head;
     }
     else {
@@ -63,6 +68,7 @@ node_p* add_node(node_p* head, int id, int energy, int period, int* offset) {
         new_node->Period = period;
         new_node->Next_Process = temp->Next_Process;
         new_node->Offset = offset;
+        new_node->State = 1;
         temp->Next_Process = new_node;
         return head;
     }
@@ -92,6 +98,7 @@ void* exec_thread(void* vargp) {
         if (finished == 1) {
             turn = -1;
             printf("T%d finished!\n", proc->Id);
+            proc->State = 0;
             pthread_mutex_unlock(&lock_turn);
             break;
         }
@@ -101,12 +108,19 @@ void* exec_thread(void* vargp) {
             proc->Current_Energy--;
             cycles--;
         }
+        if (manual_finish == proc->Id) {
+            manual_finish = -1;
+            proc->State = 0;
+        }
         printf("T%d executed %d cycles!\n", proc->Id, temp_cycles);
-        cycles = 0;
         pthread_mutex_unlock(&lock_turn);
         pthread_mutex_lock(&lock_exec);
         executed = 1;
         pthread_cond_signal(&cond_exec);
         pthread_mutex_unlock(&lock_exec);
+        if (proc->State == 0) {
+            printf("T%d finished!\n", proc->Id);
+            break;
+        }
     }
 }

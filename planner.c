@@ -5,23 +5,28 @@
 #include "martian.c"
 #include "report.c"
 
-#define TIME 18 // Solo para testear
+#define TIME 30 // Solo para testear
 #define N 3 // Solo para testear
 
 int mode;
 int* Offsets;
 int Offsets_len;
-int manual;
+int manual_insert;
 
 pthread_t* planner; 
 pthread_t* threads;
 
 int lcm(node_p* head) { 
     node_p* temp = head;
+    while (temp->State == 0) {
+        temp = temp->Next_Process;
+    }
     int multiple = temp->Period;
     while (temp->Next_Process != NULL) {
-        multiple = (multiple > temp->Next_Process->Period) 
+        if (temp->Next_Process->State == 1) {
+            multiple = (multiple > temp->Next_Process->Period) 
             ? multiple : temp->Next_Process->Period;
+        }
         temp = temp->Next_Process;
     }
 
@@ -30,9 +35,11 @@ int lcm(node_p* head) {
         found = 1;
         temp = head;
         while (temp != NULL) {
-            if (multiple % temp->Period != 0) {
-                found = 0;
-                break;
+            if (temp->State == 1) {
+                if (multiple % temp->Period != 0) {
+                    found = 0;
+                    break;
+                }
             }
             temp = temp->Next_Process;
         }
@@ -47,7 +54,7 @@ int lcm(node_p* head) {
 int regen_energy(node_p* head) {
     node_p* temp = head;
     while (temp != NULL) {
-        if ((current_cycle + *(temp->Offset)) % temp->Period == 0) {
+        if ((current_cycle + *(temp->Offset)) % temp->Period == 0 && temp->State == 1) {
             if (temp->Current_Energy != 0) {
                 return -1;
             }
@@ -66,17 +73,19 @@ void give_turn_rms(node_p* head) {
             int tmp_cycle;
             node_p* temp_for_count = head;
             while (temp_for_count != NULL) {
-                tmp_cycle = current_cycle;
-                while (1) {
-                    tmp_cycle++;
-                    if ((tmp_cycle + *(temp_for_count->Offset)) 
-                        % temp_for_count->Period == 0 
-                        || tmp_cycle - current_cycle == temp->Current_Energy) {
-                        break;
+                if (temp_for_count->State == 1) {
+                    tmp_cycle = current_cycle;
+                    while (1) {
+                        tmp_cycle++;
+                        if (((tmp_cycle + *(temp_for_count->Offset)) 
+                            % temp_for_count->Period == 0 
+                            || tmp_cycle - current_cycle == temp->Current_Energy)) {
+                            break;
+                        }
                     }
-                }
-                if (cycles == 0 || cycles > tmp_cycle - current_cycle) {
-                    cycles = tmp_cycle - current_cycle;
+                    if (cycles == 0 || cycles > tmp_cycle - current_cycle) {
+                        cycles = tmp_cycle - current_cycle;
+                    }
                 }
                 temp_for_count = temp_for_count->Next_Process;
             }
@@ -92,19 +101,21 @@ void give_turn_edf(node_p* head) {
     int min_deadline = 0;
     int tmp_deadline = 0;
     while (temp != NULL) {
-        tmp_deadline = current_cycle;
-        while (1) {
-            tmp_deadline++;
-            if ((tmp_deadline + *(temp->Offset)) % temp->Period == 0) {
-                break;
+        if (temp->State == 1) {
+            tmp_deadline = current_cycle;
+            while (1) {
+                tmp_deadline++;
+                if ((tmp_deadline + *(temp->Offset)) % temp->Period == 0) {
+                    break;
+                }
             }
-        }
-        if (min_deadline == 0 || tmp_deadline <= min_deadline) {
-            min_deadline = tmp_deadline;
-        }
-        if ((deadline == 0 || deadline > tmp_deadline) && temp->Current_Energy > 0) {
-            turn = temp->Id;
-            deadline = tmp_deadline;
+            if (min_deadline == 0 || tmp_deadline <= min_deadline) {
+                min_deadline = tmp_deadline;
+            }
+            if ((deadline == 0 || deadline > tmp_deadline) && temp->Current_Energy > 0) {
+                turn = temp->Id;
+                deadline = tmp_deadline;
+            }
         }
         temp = temp->Next_Process;
     }
@@ -121,14 +132,19 @@ void give_turn_edf(node_p* head) {
     }
 }
 
-void close_threads() {
+void close_threads(node_p* head) {
     finished = 1;
-    int n = size_list;
-    for (int i = 0; i < n; i++) { 
+    node_p* temp = head;
+    while (temp != NULL) { 
+        if (temp->State == 0) {
+            temp = temp->Next_Process;
+            continue;
+        }
         pthread_mutex_lock(&lock_turn);
-        turn = i;
+        turn = temp->Id;
         pthread_cond_broadcast(&cond_turn);
         pthread_mutex_unlock(&lock_turn);
+        temp = temp->Next_Process;
         usleep(25000);
     }
 }
@@ -160,14 +176,14 @@ void* planning (void* vargp){
         if (current_cycle == multiple) {
             current_cycle = 0;
         }
-        if (happened == 0 && current_cycle == 6 && manual == 1) { 
+        if (happened == 0 && current_cycle == 6 && manual_insert == 1) { 
             /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
             (no deberia de estarlo) */
             update_offsets(current_cycle);
             current_cycle = 0;
             if (create_offset() == -1) {
                 printf("Couldn't create the new offset!\n");
-                close_threads();
+                close_threads(head);
                 return NULL;
             }
             head = add_node(head, size_list, 2, 9, Offsets + Offsets_len - 1); 
@@ -176,7 +192,7 @@ void* planning (void* vargp){
             pthread_t* threads_temp = (pthread_t*)realloc(threads, size_list);
             if (threads_temp == NULL) { 
                 printf("Couldn't create the new thread!\n");
-                close_threads();
+                close_threads(head);
                 return NULL;
             } 
             else {
@@ -189,9 +205,13 @@ void* planning (void* vargp){
             pthread_create(threads + size_list - 1, NULL, exec_thread, (void *) temp);
             happened = 1;
         }
+        if (happened == 0 && current_cycle == 6 && manual_finish == -1) {
+            manual_finish = 0; // Borrar
+            happened = 1;
+        }
         if (regen_energy(head) == -1) {
             printf("Couldn't find a way to schedule the processes!\n");
-            close_threads();
+            close_threads(head);
             return NULL;
         }
         if (mode == 0) {
@@ -200,6 +220,7 @@ void* planning (void* vargp){
         else {
             give_turn_edf(head);
         }
+        int temp_turn = turn;
         int temp_cycle = cycles;
         printf("Turn %d: ", current_cycle);
         if (turn != -1) {
@@ -213,6 +234,13 @@ void* planning (void* vargp){
             executed = 0;
             pthread_mutex_unlock(&lock_exec);
             current_cycle += temp_cycle;
+            node_p* temp = head;
+            while (temp->Id != temp_turn) {
+                temp = temp->Next_Process;
+            }
+            if (temp->State == 0) {
+                multiple = lcm(head);
+            }
             usleep(25000);
         }
         else {
@@ -221,7 +249,7 @@ void* planning (void* vargp){
         }
     }
     printf("Calendarization ended!\n");
-    close_threads();
+    close_threads(head);
 }
 
 int main() {
@@ -254,7 +282,8 @@ int main() {
     executed = 0;
     current_cycle = 0;
     mode = 0; // Input del usuario
-    manual = 0; // Borrar
+    manual_insert = 0; // Borrar
+    manual_finish = -2; // Borrar
 
     /* Start threads */
     
