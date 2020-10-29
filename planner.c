@@ -1,64 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h> 
+#include <pthread.h>
+#include "martian.c"
+#include "report.c"
 
-pthread_mutex_t mutex;
-int turn;
+#define TIME 20 // Solo para testear
+#define N 3 // Solo para testear
 
-typedef struct Process {
-    int Id;
-    int Time;
-    int Period;
-    struct Process* Next_Process;
-} node_p;
+int mode;
+int* Offsets;
+int Offsets_len;
+int manual_insert;
 
-node_p* add_node(node_p* head, int id, int time, int period) {
-    if (head == NULL) {
-        head = (node_p*)malloc(sizeof(node_p));
-        head->Id = id;
-        head->Time = time;
-        head->Period = period;
-        head->Next_Process = NULL;
-    }
-    else {
-        node_p* temp = head;
-        while (temp->Next_Process != NULL) {
-            temp = temp->Next_Process;
-        }
-        node_p* new_node = (node_p*)malloc(sizeof(node_p));
-        new_node->Id = id;
-        new_node->Time = time;
-        new_node->Period = period;
-        new_node->Next_Process = NULL;
-        temp->Next_Process = new_node;
-    }
-    return head;
-}
+pthread_t* planner; 
+pthread_t* threads;
 
-void print_list(node_p* head) {
+int lcm(node_p* head) { 
     node_p* temp = head;
-    printf("[");
-    while (temp != NULL) {
-        printf("(%d, %d, %d)", temp->Id, temp->Time, temp->Period);
+    while (temp->State == 0) {
         temp = temp->Next_Process;
-        if (temp != NULL) {
-            printf(", ");
-        }
     }
-    printf("]\n");
-}
-
-void* exec_thread(void* vargp) {
-    printf("FINISHED\n");
-}
-
-int lcm(node_p* head) {
-    node_p* temp = head;
     int multiple = temp->Period;
     while (temp->Next_Process != NULL) {
-        multiple = (multiple > temp->Next_Process->Period) 
+        if (temp->Next_Process->State == 1) {
+            multiple = (multiple > temp->Next_Process->Period) 
             ? multiple : temp->Next_Process->Period;
+        }
         temp = temp->Next_Process;
     }
 
@@ -67,9 +35,11 @@ int lcm(node_p* head) {
         found = 1;
         temp = head;
         while (temp != NULL) {
-            if (multiple % temp->Period != 0) {
-                found = 0;
-                break;
+            if (temp->State == 1) {
+                if (multiple % temp->Period != 0) {
+                    found = 0;
+                    break;
+                }
             }
             temp = temp->Next_Process;
         }
@@ -81,34 +51,270 @@ int lcm(node_p* head) {
     return multiple;
 }
 
+int regen_energy(node_p* head) {
+    node_p* temp = head;
+    while (temp != NULL) {
+        if ((current_cycle + *(temp->Offset)) % temp->Period == 0 && temp->State == 1) {
+            if (temp->Current_Energy != 0) {
+                return -1;
+            }
+            temp->Current_Energy = temp->Max_Energy;
+        }
+        temp = temp->Next_Process;
+    }
+    return 0;
+}
+
+void give_turn_rms(node_p* head) {
+    node_p* temp = head;
+    while (temp != NULL) {
+        if (temp->Current_Energy > 0) {
+            turn = temp->Id;
+            int tmp_cycle;
+            node_p* temp_for_count = head;
+            while (temp_for_count != NULL) {
+                if (temp_for_count->State == 1) {
+                    tmp_cycle = current_cycle;
+                    while (1) {
+                        tmp_cycle++;
+                        if (((tmp_cycle + *(temp_for_count->Offset)) 
+                            % temp_for_count->Period == 0 
+                            || tmp_cycle - current_cycle == temp->Current_Energy)) {
+                            break;
+                        }
+                    }
+                    if (cycles == 0 || cycles > tmp_cycle - current_cycle) {
+                        cycles = tmp_cycle - current_cycle;
+                    }
+                }
+                temp_for_count = temp_for_count->Next_Process;
+            }
+            return;
+        }
+        temp = temp->Next_Process;
+    }
+}
+
+void give_turn_edf(node_p* head) {
+    node_p* temp = head;
+    int deadline = 0;
+    int min_deadline = 0;
+    int tmp_deadline = 0;
+    while (temp != NULL) {
+        if (temp->State == 1) {
+            tmp_deadline = current_cycle;
+            while (1) {
+                tmp_deadline++;
+                if ((tmp_deadline + *(temp->Offset)) % temp->Period == 0) {
+                    break;
+                }
+            }
+            if (min_deadline == 0 || tmp_deadline <= min_deadline) {
+                min_deadline = tmp_deadline;
+            }
+            if ((deadline == 0 || deadline > tmp_deadline) && temp->Current_Energy > 0) {
+                turn = temp->Id;
+                deadline = tmp_deadline;
+            }
+        }
+        temp = temp->Next_Process;
+    }
+    if (deadline != 0) {
+        temp = head;
+        while (temp->Id != turn) {
+            temp = temp->Next_Process;
+        }
+        int final_deadline = (min_deadline < deadline) ? min_deadline : deadline;
+        cycles = final_deadline - current_cycle;
+        if (temp->Current_Energy <= final_deadline - current_cycle) {
+            cycles = temp->Current_Energy;
+        }
+    }
+}
+
+void close_threads(node_p* head) {
+    finished = 1;
+    node_p* temp = head;
+    while (temp != NULL) { 
+        if (temp->State == 0) {
+            temp = temp->Next_Process;
+            continue;
+        }
+        pthread_mutex_lock(&lock_turn);
+        turn = temp->Id;
+        pthread_cond_broadcast(&cond_turn);
+        pthread_mutex_unlock(&lock_turn);
+        temp = temp->Next_Process;
+        usleep(25000);
+    }
+}
+
+int create_offset() {
+    Offsets_len++;
+    int* Offsets_temp = (int*)realloc(Offsets, Offsets_len);
+    if (Offsets_temp == NULL) { 
+        free(Offsets);
+        return -1;
+    } 
+    else {
+        Offsets = Offsets_temp; 
+        *(Offsets + Offsets_len - 1) = 0;
+        return 0;
+    }
+}
+
+void update_offsets(int offset) {
+    for (int i = 0; i < Offsets_len; i++) {
+        *(Offsets + i) += offset;
+    }
+}
+
+void* planning (void* vargp){
+    node_p* head = (node_p*)vargp;
+    int happened = 0;
+    int i = 0;
+    while (i < TIME) {
+        if (current_cycle == multiple) {
+            current_cycle = 0;
+        }
+        if (happened == 0 && current_cycle == 6 && manual_insert == 1) { 
+            /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
+            (no deberia de estarlo) */
+            update_offsets(current_cycle);
+            current_cycle = 0;
+            if (create_offset() == -1) {
+                printf("Couldn't create the new offset!\n");
+                close_threads(head);
+                return NULL;
+            }
+            head = add_node(head, size_list, 2, 9, Offsets + Offsets_len - 1); 
+            // Los datos 2 (T) y 9 (P) deben ser extraidos del GUI
+            multiple = lcm(head);
+            pthread_t* threads_temp = (pthread_t*)realloc(threads, size_list);
+            if (threads_temp == NULL) { 
+                printf("Couldn't create the new thread!\n");
+                close_threads(head);
+                return NULL;
+            } 
+            else {
+                threads = threads_temp;
+            }
+            node_p* temp = head;
+            while (temp->Id != size_list - 1) {
+                temp = temp->Next_Process;
+            }
+            pthread_create(threads + size_list - 1, NULL, exec_thread, (void *) temp);
+            happened = 1;
+        }
+        if (happened == 0 && current_cycle == 6 && manual_finish == -1) {
+            manual_finish = 0; // Borrar
+            happened = 1;
+        }
+        if (regen_energy(head) == -1) {
+            printf("Couldn't find a way to schedule the processes!\n");
+            close_threads(head);
+            return NULL;
+        }
+        if (mode == 0) {
+            give_turn_rms(head);
+        }
+        else {
+            give_turn_edf(head);
+        }
+        int temp_turn = turn;
+        int temp_cycle = cycles;
+        printf("Turn %d: ", current_cycle);
+        if (turn != -1) {
+            pthread_mutex_lock(&lock_turn);
+            pthread_cond_broadcast(&cond_turn);
+            pthread_mutex_unlock(&lock_turn);
+            pthread_mutex_lock(&lock_exec);
+            while (executed == 0) {
+                pthread_cond_wait(&cond_exec, &lock_exec);
+            }
+            executed = 0;
+            pthread_mutex_unlock(&lock_exec);
+            current_cycle += temp_cycle;
+            i += temp_cycle;
+            node_p* temp = head;
+            while (temp->Id != temp_turn) {
+                temp = temp->Next_Process;
+            }
+            if (temp->State == 0) {
+                multiple = lcm(head);
+            }
+            usleep(25000);
+        }
+        else {
+            printf("skipped!\n");
+            current_cycle++;
+            i++;
+        }
+    }
+    printf("Calendarization ended!\n");
+    close_threads(head);
+}
+
 int main() {
+
+    /* INIT */
+
     node_p* head = NULL;
-    int times[] = {1, 2, 6};
-    int periods[] = {6, 9, 18};
+    size_list = 0;
+    int times[] = {1, 2, 6}; 
+    int periods[] = {6, 9, 18}; 
+    Offsets = (int*)malloc(sizeof(int));
+    *Offsets = 0;
+    Offsets_len = 1;
 
-    head = add_node(head, 0, times[0], periods[0]);
-    head = add_node(head, 2, times[2], periods[2]);
-    head = add_node(head, 1, times[1], periods[1]);
-    print_list(head);
+    for (int i = 0; i < N; i++) { 
+        head = add_node(head, i, times[i], periods[i], Offsets);
+    }
 
-    printf("%d\n", lcm(head));
+    /* Planner and threads */
 
-    // pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * 3);
+    planner = (pthread_t*)malloc(sizeof(pthread_t));
+    threads = (pthread_t*)malloc(sizeof(pthread_t) * size_list);
 
-    // turn = head->Id;
-    // pthread_mutex_init(&mutex, NULL);
+    /* Global variables */
 
-    // node_p* temp = head;
-    // for (int i = 0; i < 3; i++) {
-    //     pthread_create(threads + i, NULL, exec_thread, (void *) temp);
-    //     temp = temp->Next_Process;
-    // }
+    turn = -1;
+    finished = 0;
+    cycles = 0;
+    multiple = lcm(head);
+    executed = 0;
+    current_cycle = 0;
+    mode = 0; // Input del usuario
+    manual_insert = 0; // Borrar
+    manual_finish = -2; // Borrar
 
-    // for (int i = 0; i < 3; i++) {
-    //     pthread_join(*(threads + i), NULL);
-    // }
+    /* Start threads */
+    
+    node_p* temp = head;
+    for (int i = 0; i < size_list; i++) { 
+        pthread_create(threads + i, NULL, exec_thread, (void *) temp);
+        temp = temp->Next_Process;
+    }
 
-    // pthread_mutex_destroy(&mutex);
+    pthread_create(planner, NULL, planning, (void *) head);
+
+    /* Join threads */
+
+    pthread_join(*planner, NULL);
+    
+    for (int i = 0; i < size_list; i++) {
+        pthread_join(*(threads + i), NULL);
+    }
+
+    /* Show report */
+
+    show_report();
 
     return 0;
 }
+
+/*
+gcc planner.c -o planner -lpthread $(pkg-config allegro-5 allegro_font-5 --libs --cflags)
+
+./planner
+*/
