@@ -1,17 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
 #include "martian.c"
 #include "report.c"
 
-#define TIME 100 // Solo para testear
+//#define TIME 100 // Solo para testear
 #define N 3 // Solo para testear
 
 int mode;
-int* Offsets;
-int Offsets_len;
 int manual_insert;
+
+bool keep_execution = true;
 
 pthread_t* planner; 
 pthread_t* threads;
@@ -56,6 +52,7 @@ int lcm(node_p* head) {
 
 int regen_energy(node_p* head) {
     node_p* temp = head;
+    
     while (temp != NULL) {
         if ((current_cycle + *(temp->Offset)) % temp->Period == 0 && temp->State == 1) {
             if (temp->Current_Energy != 0) {
@@ -65,6 +62,7 @@ int regen_energy(node_p* head) {
         }
         temp = temp->Next_Process;
     }
+   
     return 0;
 }
 
@@ -173,57 +171,55 @@ void update_offsets(int offset) {
     }
 }
 
-void* planning (void* vargp){
-    node_p* head = (node_p*)vargp;
-    int i = 0;
-    while (i < TIME) {
+void* planning (){
+    while (keep_execution) {
 
         if (current_cycle == multiple) {
             current_cycle = 0;
         }
 
-        if (i == 6 && manual_insert == 1) { 
+        if (global_cycle == 6 && manual_insert == 1) { 
             /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
             (no deberia de estarlo) */
             update_offsets(current_cycle);
             current_cycle = 0;
             if (create_offset() == -1) {
                 printf("Couldn't create the new offset!\n");
-                close_threads(head, i);
+                close_threads(head, global_cycle);
                 return NULL;
             }
-            head = add_node(head, size_list, 2, 9, Offsets + Offsets_len - 1);
-            add_data(size_list - 1, i, 2, 9);
-            proc_len++;
+            head = add_node(head, length, 2, 9, Offsets + Offsets_len - 1);
+            add_data(length - 1, global_cycle, 2, 9);
+            length++;
             // Los datos 2 (T) y 9 (P) deben ser extraidos del GUI
             multiple = lcm(head);
-            pthread_t* threads_temp = (pthread_t*)realloc(threads, size_list);
+            pthread_t* threads_temp = (pthread_t*)realloc(threads, length);
             if (threads_temp == NULL) { 
                 printf("Couldn't create the new thread!\n");
-                close_threads(head, i);
+                close_threads(head, global_cycle);
                 return NULL;
             } 
             else {
                 threads = threads_temp;
             }
             node_p* temp = head;
-            while (temp->Id != size_list - 1) {
+            while (temp->Id != length - 1) {
                 temp = temp->Next_Process;
             }
-            pthread_create(threads + size_list - 1, NULL, exec_thread, (void *) temp);
+            pthread_create(threads + length - 1, NULL, exec_thread, (void *) temp);
             manual_insert = 0;
         }
 
-        if (i == 6 && manual_finish == -1) {
+        if (global_cycle == 6 && manual_finish == -1) {
             manual_finish = 0; // Borrar
         }
-
+        
         if (regen_energy(head) == -1) {
             printf("Couldn't find a way to schedule the processes!\n");
-            close_threads(head, i);
+            close_threads(head, global_cycle);
             return NULL;
         }
-
+        
         if (mode == 0) {
             give_turn_rms(head);
         }
@@ -233,6 +229,7 @@ void* planning (void* vargp){
 
         int temp_turn = turn;
         int temp_cycle = cycles;
+        // print_list(head);
         printf("Turn %d: ", current_cycle);
 
         if (turn != -1) {
@@ -246,14 +243,14 @@ void* planning (void* vargp){
             executed = 0;
             pthread_mutex_unlock(&lock_exec);
             current_cycle += temp_cycle;
-            i += temp_cycle;
+            global_cycle += temp_cycle;
             node_p* temp = head;
             while (temp->Id != temp_turn) {
                 temp = temp->Next_Process;
             }
             if (temp->State == 0) {
                 multiple = lcm(head);
-                set_end(temp->Id, i);
+                set_end(temp->Id, global_cycle);
             }
             add_executed_cycle(temp_turn, temp_cycle);
             usleep(25000);
@@ -261,37 +258,38 @@ void* planning (void* vargp){
         else {
             printf("skipped!\n");
             current_cycle++;
-            i++;
+            global_cycle++;
+            usleep(100000);
             add_executed_cycle(-1, 1);
         }
     }
     printf("Calendarization ended!\n");
-    close_threads(head, i);
+    close_threads(head, global_cycle);
 }
 
-int main() {
+void start_threads() {
 
     /* INIT */
 
     srand(time(NULL)); // Para los random de report
 
-    node_p* head = NULL;
-    size_list = 0;
-    int times[] = {1, 2, 6}; 
-    int periods[] = {6, 9, 18}; 
-    Offsets = (int*)malloc(sizeof(int));
-    *Offsets = 0;
-    Offsets_len = 1;
+    // node_p* head = NULL;
+    // length = 0;
+    // // int times[] = {1, 2, 6}; 
+    // // int periods[] = {6, 9, 18}; 
+    // Offsets = (int*)malloc(sizeof(int));
+    // *Offsets = 0;
+    // Offsets_len = 1;
 
-    for (int i = 0; i < N; i++) { 
-        head = add_node(head, i, times[i], periods[i], Offsets);
-        add_data(i, 0, times[i], periods[i]);
-    }
-    proc_len = size_list;
+    // for (int i = 0; i < N; i++) { 
+    //     head = add_node(head, i, times[i], periods[i], Offsets);
+    //     add_data(i, 0, times[i], periods[i]);
+    // }
+    // proc_len = length;
 
     /* Planner and threads */
     planner = (pthread_t*)malloc(sizeof(pthread_t));
-    threads = (pthread_t*)malloc(sizeof(pthread_t) * size_list);
+    threads = (pthread_t*)malloc(sizeof(pthread_t) * length);
 
     /* Global variables */
 
@@ -308,27 +306,12 @@ int main() {
     /* Start threads */
     
     node_p* temp = head;
-    for (int i = 0; i < size_list; i++) { 
+    for (int i = 0; i < length; i++) { 
         pthread_create(threads + i, NULL, exec_thread, (void *) temp);
         temp = temp->Next_Process;
     }
     
-    pthread_create(planner, NULL, planning, (void *) head);
-
-    /* Join threads */
-
-    pthread_join(*planner, NULL);
-    
-    for (int i = 0; i < size_list; i++) {
-        pthread_join(*(threads + i), NULL);
-    }
-
-    /* Show report */
-
-    mode_r = mode;
-    show_report();
-
-    return 0;
+    pthread_create(planner, NULL, planning, NULL);
 }
 
 /*

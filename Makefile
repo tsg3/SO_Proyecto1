@@ -11,3 +11,6 @@ gui:
 
 run_gui:
 	./bin/main
+
+debug_gui:
+	gcc -g main.c -lpthread $(COMPILE)

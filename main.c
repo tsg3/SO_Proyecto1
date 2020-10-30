@@ -56,7 +56,7 @@ void draw_background_game()
 
 void draw_marcians()
 {
-    for (int i = 0; i < lenght; i++)
+    for (int i = 0; i < length; i++)
     {
         al_draw_scaled_bitmap(marcian_image, 0, 0, imageWidth, imageHeight, marcians[i].pos_x, marcians[i].pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
     }
@@ -105,7 +105,7 @@ void initialize_variables()
     // Window size
     window_height = 544;
     window_width = 832;
-    lenght = 0;
+    length = 0;
 
     timer = al_create_timer(1.0 / 30.0);
     queue = al_create_event_queue();
@@ -138,6 +138,11 @@ void initialize_variables()
     running = true;
     new_energy = 0;
     new_period = 0;
+
+    head = NULL;
+    Offsets = NULL;
+    Offsets_len = 0;
+    global_cycle = 0;
 }
 
 void add_new_marcian()
@@ -146,9 +151,48 @@ void add_new_marcian()
     {
         if (new_energy < new_period)
         {
-            marcians[lenght] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = new_energy, .period = new_period, .direction = 'c'};
-            lenght++;
+            marcians[length] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = new_energy, .period = new_period, .direction = 'c'};
             printf("New marcian added with energy: %d and period: %d\n", new_energy, new_period);
+
+            if (Offsets == NULL) {
+                Offsets = (int*)malloc(sizeof(int));
+                *Offsets = 0;
+                Offsets_len++;
+            }
+            else if (game_mode == 'm') {
+                update_offsets(current_cycle);
+                current_cycle = 0;
+                if (create_offset() == -1) {
+                    printf("Couldn't create the new offset!\n");
+                    keep_execution = false;
+                    running = false;
+                    return;
+                }
+            }
+            head = add_node(head, length, new_energy, new_period, Offsets + Offsets_len - 1);
+            add_data(length, global_cycle, new_energy, new_period);
+            length++;
+            // print_list(head);
+
+            if (game_mode == 'm') {
+                multiple = lcm(head);
+                pthread_t* threads_temp = (pthread_t*)realloc(threads, length);
+                if (threads_temp == NULL) { 
+                    printf("Couldn't create the new thread!\n");
+                    keep_execution = false;
+                    running = false;
+                    return;
+                } 
+                else {
+                    threads = threads_temp;
+                }
+                node_p* temp = head;
+                while (temp->Id != length - 1) {
+                    temp = temp->Next_Process;
+                }
+                pthread_create(threads + length - 1, NULL, exec_thread, (void *) temp);
+            }
+
             new_period = 0;
             new_energy = 0;
         }
@@ -166,8 +210,11 @@ void validate_key()
         switch (event.keyboard.keycode)
         {
         case ALLEGRO_KEY_X:
-            if (current_window == 'g')
+            if (current_window == 'g') {
                 current_window = 'r';
+                running = false;
+                keep_execution = false;
+            }
             else
                 running = false;
             break;
@@ -185,15 +232,19 @@ void validate_key()
                 current_window = 'g';
                 game_mode = 'm';
                 printf("Current mode manual mode: %c\n", game_mode);
+                // Create threads
+                start_threads();
             }
             break;
         case ALLEGRO_KEY_SPACE:
             if (current_window == 'a')
             {
-                if (lenght > 0)
+                if (length > 0)
                 {
                     current_window = 'g';
                     game_mode = 'a';
+                    // Create threads
+                    start_threads();
                 }
             }
             else if (current_window == 'g' && game_mode == 'm')
@@ -277,7 +328,7 @@ int main()
 
             draw_background_game();
 
-            if (lenght > 0)
+            if (length > 0)
             {
                 make_movement(&marcians[current_marcian]);
 
@@ -294,15 +345,25 @@ int main()
                 {
                     marcians[current_marcian].energy = 4;
                     current_marcian++;
-                    if (current_marcian >= lenght)
+                    if (current_marcian >= length)
                         current_marcian = 0;
                 }
-                if (current_marcian == lenght)
+                if (current_marcian == length)
                     current_marcian = 0;
             }
         }
 
         al_flip_display();
+    }
+
+    if (current_window == 'r') {
+        /* Join threads */
+
+        pthread_join(*planner, NULL);
+        
+        for (int i = 0; i < length; i++) {
+            pthread_join(*(threads + i), NULL);
+        }
     }
 
     al_destroy_bitmap(marcian_image);
@@ -312,6 +373,14 @@ int main()
     al_destroy_display(disp);
     al_destroy_timer(timer);
     al_destroy_event_queue(queue);
+
+    if (current_window == 'r') {
+        /* Show report */
+
+        mode_r = mode;
+
+        show_report();
+    }
 
     return 0;
 }
