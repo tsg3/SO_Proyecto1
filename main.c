@@ -326,30 +326,36 @@ int main()
         else if (current_window == 'g')
         {
 
-            draw_background_game();
+            if (!keep_execution) {
+                current_window = 'r';
+                running = false;
+            }
+            else {
+                draw_background_game();
 
-            if (length > 0)
-            {
-                make_movement(&marcians[current_marcian]);
-
-                draw_marcians(marcian_image);
-
-                // Validaciones temporales
-                if (steps == 0)
+                if (length > 0)
                 {
-                    marcians[current_marcian].energy--;
-                    marcians[current_marcian].direction = 'c';
-                    steps = 8;
-                }
-                if (marcians[current_marcian].energy == 0)
-                {
-                    marcians[current_marcian].energy = 4;
-                    current_marcian++;
-                    if (current_marcian >= length)
+                    make_movement(&marcians[current_marcian]);
+
+                    draw_marcians(marcian_image);
+
+                    // Validaciones temporales
+                    if (steps == 0)
+                    {
+                        marcians[current_marcian].energy--;
+                        marcians[current_marcian].direction = 'c';
+                        steps = 8;
+                    }
+                    if (marcians[current_marcian].energy == 0)
+                    {
+                        marcians[current_marcian].energy = 4;
+                        current_marcian++;
+                        if (current_marcian >= length)
+                            current_marcian = 0;
+                    }
+                    if (current_marcian == length)
                         current_marcian = 0;
                 }
-                if (current_marcian == length)
-                    current_marcian = 0;
             }
         }
 
