@@ -234,7 +234,6 @@ void start_threads() {
     // Global variables
 
     multiple = lcm(head);
-    mode = 0; // Borrar
 
     // Report Variables
 
