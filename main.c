@@ -1,8 +1,15 @@
 #include "planner.c"
 
-const char mode_text_guide[] = "Scheduling mode:";
-const char add_marcian_a[] = "Scheduling mode:";
 
+void join_threads()
+{
+    pthread_join(*planner, NULL);
+
+    for (int i = 0; i < length; i++)
+    {
+        pthread_join(*(threads + i), NULL);
+    }
+}
 void draw_background_game()
 {
     for (int i = 0; i < 17; i++)
@@ -60,9 +67,17 @@ void draw_background_game()
 void draw_marcians()
 {
     node_p *martian = head;
+    proc_data *martian_data = NULL;
     while (martian)
     {
-        al_draw_scaled_bitmap(marcian_image, 0, 0, imageWidth, imageHeight, martian->pos_x, martian->pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
+        martian_data = Data_Head;
+        while (martian_data->Id_Proc != martian->Id)
+        {
+            martian_data = martian_data->Next_Data;
+        }
+
+        al_draw_tinted_scaled_bitmap(marcian_image, al_map_rgb(martian_data->R, martian_data->G, martian_data->B), 0, 0, imageWidth, imageHeight, martian->pos_x, martian->pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
+
         martian = martian->Next_Process;
     }
 }
@@ -97,7 +112,7 @@ void draw_menu_activities()
 
         // Guide
         al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(modify_values_text), window_height / 2.0f + 30 * 4 - 15, 0, modify_values_text);
-        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(up_down_text), window_height / 2.0f + 30 * 4+10, 0, up_down_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(up_down_text), window_height / 2.0f + 30 * 4 + 10, 0, up_down_text);
         al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(r_l_text), window_height / 2.0f + 30 * 4, 0, r_l_text);
         al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(start_space), window_height / 2.0f + 30 * 4 + 70, 0, start_space);
         al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(add_a), window_height / 2.0f + 30 * 4 + 55, 0, add_a);
@@ -228,13 +243,13 @@ void validate_key()
 {
     if (event.type == ALLEGRO_EVENT_KEY_DOWN)
     {
+
+        redraw = true;
         switch (event.keyboard.keycode)
         {
         case ALLEGRO_KEY_X:
             if (current_window == 'g')
             {
-                current_window = 'r';
-                running = false;
                 keep_execution = false;
             }
             else
@@ -327,6 +342,8 @@ void validate_key()
             break;
         }
     }
+    else if (event.type == ALLEGRO_EVENT_KEY_UP)
+        redraw = true;
 }
 
 int main()
@@ -341,11 +358,14 @@ int main()
     al_register_event_source(queue, al_get_display_event_source(disp));
     al_register_event_source(queue, al_get_timer_event_source(timer));
 
-    bool redraw = true;
+    redraw = true;
 
     al_start_timer(timer);
     // Marcian manager
     int current_marcian = 0;
+
+    // Title
+    al_set_window_title(disp, "Martians");
 
     // Game loop
     while (running)
@@ -353,44 +373,51 @@ int main()
 
         al_wait_for_event(queue, &event);
 
+        if (event.type == ALLEGRO_EVENT_TIMER)
+        {
+            redraw = true;
+        }
+
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             break;
 
-        al_clear_to_color(al_map_rgb(0, 0, 0));
-
         validate_key();
 
-        if (current_window == 'm' || current_window == 'a')
-            draw_menu_activities();
-
-        else if (current_window == 'g')
+        if (redraw && al_is_event_queue_empty(queue))
         {
+            al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            if (!keep_execution)
+            if (current_window == 'm' || current_window == 'a')
             {
-                current_window = 'r';
-                running = false;
+                draw_menu_activities();
             }
-            else
+
+            else if (current_window == 'g')
             {
-                draw_background_game();
-                draw_marcians();
+                if (!keep_execution)
+                {
+                    join_threads();
+                    current_window = 'r';
+                }
+                else
+                {
+                    draw_background_game();
+                    draw_marcians();
+                }
             }
+            
+            if (current_window == 'r')
+            {
+                show_report();
+            }
+            al_flip_display();
+            redraw = false;
         }
-
-        al_flip_display();
     }
 
     if (current_window == 'r')
     {
         /* Join threads */
-
-        pthread_join(*planner, NULL);
-
-        for (int i = 0; i < length; i++)
-        {
-            pthread_join(*(threads + i), NULL);
-        }
     }
 
     al_destroy_bitmap(marcian_image);
@@ -400,10 +427,6 @@ int main()
     al_destroy_display(disp);
     al_destroy_timer(timer);
     al_destroy_event_queue(queue);
-
-    if (current_window == 'r') {
-        show_report();
-    }
 
     return 0;
 }
