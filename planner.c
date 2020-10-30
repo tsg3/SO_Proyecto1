@@ -217,6 +217,7 @@ void* planning (){
         if (regen_energy(head) == -1) {
             printf("Couldn't find a way to schedule the processes!\n");
             close_threads(head, global_cycle);
+            keep_execution = false;
             return NULL;
         }
         
