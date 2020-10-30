@@ -1,9 +1,4 @@
-#include <allegro5/allegro5.h>
-#include <allegro5/allegro_font.h>
-#include <allegro5/allegro_primitives.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include "standard.h"
 
 typedef struct Cycles {
     int Id_Proc;
@@ -77,8 +72,6 @@ void set_end (int id, int end) {
     temp_data->End = end;
 }
 
-int proc_len = 0;
-
 void add_executed_cycle(int id, int cycles) {
     Cycles_Count += cycles;
     if (Cycles_Head == NULL) {
@@ -130,21 +123,21 @@ void draw_window() {
     char str[10];
     int i = 0;
     while(i < lines) {
-        sprintf(str, "%.1f", i * 0.5);
+        sprintf(str, "%d", i);
         al_draw_line(120 + i * 60 * scalar - slider, 30, 
-            120 + i * 60 * scalar - slider, 60 + proc_len * 30, al_map_rgb(0, 0, 0), 1);
+            120 + i * 60 * scalar - slider, 60 + length * 30, al_map_rgb(0, 0, 0), 1);
         al_draw_text(font, al_map_rgb(0, 0, 0), 
-            120 + i * 60 * scalar - slider, 60 + proc_len * 30, 0, str);
+            120 + i * 60 * scalar - slider, 60 + length * 30, 0, str);
         i++;
     }
 
     proc_data* data_temp = Data_Head;
     int x = 0;
-    int length;
+    int length_window;
     while (data_temp != NULL) {
         x = data_temp->Start * 6;
-        length = data_temp->End * 6;
-        while (x < length) {
+        length_window = data_temp->End * 6;
+        while (x < length_window) {
             al_draw_filled_rectangle(120 - slider + x * scalar, 
                 35 + (data_temp->Id_Proc) * 30, 
                 120 - slider + (x + data_temp->Time * 6) * scalar, 
@@ -172,26 +165,26 @@ void draw_window() {
                 data_temp = data_temp->Next_Data;
             }
             al_draw_filled_rectangle(120 - slider + previous_x * scalar, 
-                35 + proc_len * 30, 
+                35 + length * 30, 
                 120 - slider + (previous_x + temp->Exec_Cycles * 6) * scalar, 
-                55 + proc_len * 30, 
+                55 + length * 30, 
                 al_map_rgb(data_temp->R, data_temp->G, data_temp->B));
             al_draw_rectangle(120 - slider + previous_x * scalar, 
-                35 + proc_len * 30, 
+                35 + length * 30, 
                 120 - slider + (previous_x + temp->Exec_Cycles * 6) * scalar, 
-                55 + proc_len * 30 , 
+                55 + length * 30 , 
                 al_map_rgb(0, 0, 0), 1);
         }
         previous_x += temp->Exec_Cycles * 6;
         temp = temp->Next_Cycle;
     }
 
-    al_draw_text(font, al_map_rgb(0, 0, 0), 306, 90 + proc_len * 30, 0, "Time (s)");
+    al_draw_text(font, al_map_rgb(0, 0, 0), 306, 90 + length * 30, 0, "Time (s)");
 
     al_draw_filled_rectangle(0, 0, 119, 210, al_map_rgb(255, 255, 255));
 
     i = 0;
-    while(i < proc_len) {
+    while(i < length) {
         strcpy(temp_title, "Marciano \0");
         sprintf(str, "%d", i + 1);
         strcat(temp_title, str);

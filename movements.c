@@ -1,4 +1,4 @@
-#include "standard.h"
+#include "planner.c"
 
 void move_marcian(MARCIAN *marcian)
 {
@@ -6,8 +6,8 @@ void move_marcian(MARCIAN *marcian)
     {
         int pos_x = marcian->pos_x / 32;
         int pos_y = marcian->pos_y / 32;
-        printf("Energy: %d, address: %c, marcian: %d\n", marcian->energy, marcian->direction, marcian->id);
-        printf("Marcian: (%d, %d); Current(%d, %d)\n", pos_x, pos_y, current_x, current_y);
+        // printf("Energy: %d, address: %c, marcian: %d\n", marcian->energy, marcian->direction, marcian->id);
+        // printf("Marcian: (%d, %d); Current(%d, %d)\n", pos_x, pos_y, current_x, current_y);
         switch (marcian->direction)
         {
         case 'u':
@@ -113,7 +113,7 @@ void make_movement(MARCIAN *marcian)
 {
     int pos_x = marcian->pos_x / 32;
     int pos_y = marcian->pos_y / 32;
-    printf("ID: %d, Address: %c\n", marcian->id, marcian->direction);
+    // printf("ID: %d, Address: %c\n", marcian->id, marcian->direction);
     if (marcian->direction == 'c' || pos_x != current_x || pos_y != current_y)
     {
 

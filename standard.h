@@ -1,8 +1,8 @@
-#include <stdio.h>
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
-#include <unistd.h>
+#include <allegro5/allegro_primitives.h>
+#include <time.h>
 
 ALLEGRO_TIMER *timer;
 ALLEGRO_EVENT_QUEUE *queue;
@@ -13,7 +13,7 @@ ALLEGRO_BITMAP *rock;
 ALLEGRO_BITMAP *marcian_image;
 ALLEGRO_EVENT event;
 
-int lenght;
+int length;
 int steps;
 int imageWidth;
 int imageHeight;
@@ -62,7 +62,7 @@ typedef struct MARCIAN
     char direction;
 } MARCIAN;
 
-MARCIAN marcians[3];
+MARCIAN marcians[10];
 
 char addresses[4] = {'u', 'd', 'l', 'r'};
 
@@ -84,3 +84,10 @@ char maze[17][17] = {
     {'o', 'f', 'f', 'f', 'f', 'f', 'f', 'o', 'o', 'f', 'o', 'o', 'o', 'f', 'o', 'o', 'o'},
     {'o', 'o', 'o', 'o', 'o', 'o', 'f', 'f', 'f', 'f', 'o', 'o', 'f', 'f', 'f', 'f', 'm'},
     {'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o'}};
+
+// Planner
+
+node_p* head;
+int* Offsets;
+int Offsets_len;
+int global_cycle;
