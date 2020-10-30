@@ -1,5 +1,4 @@
 #include "martian.c"
-#include "report.c"
 
 //#define TIME 100 // Solo para testear
 #define N 3 // Solo para testear
@@ -178,37 +177,37 @@ void* planning (){
             current_cycle = 0;
         }
 
-        if (global_cycle == 6 && manual_insert == 1) { 
-            /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
-            (no deberia de estarlo) */
-            update_offsets(current_cycle);
-            current_cycle = 0;
-            if (create_offset() == -1) {
-                printf("Couldn't create the new offset!\n");
-                close_threads(head, global_cycle);
-                return NULL;
-            }
-            head = add_node(head, length, 2, 9, Offsets + Offsets_len - 1);
-            add_data(length - 1, global_cycle, 2, 9);
-            length++;
-            // Los datos 2 (T) y 9 (P) deben ser extraidos del GUI
-            multiple = lcm(head);
-            pthread_t* threads_temp = (pthread_t*)realloc(threads, length);
-            if (threads_temp == NULL) { 
-                printf("Couldn't create the new thread!\n");
-                close_threads(head, global_cycle);
-                return NULL;
-            } 
-            else {
-                threads = threads_temp;
-            }
-            node_p* temp = head;
-            while (temp->Id != length - 1) {
-                temp = temp->Next_Process;
-            }
-            pthread_create(threads + length - 1, NULL, exec_thread, (void *) temp);
-            manual_insert = 0;
-        }
+        // if (global_cycle == 6 && manual_insert == 1) { 
+        //     /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
+        //     (no deberia de estarlo) */
+        //     update_offsets(current_cycle);
+        //     current_cycle = 0;
+        //     if (create_offset() == -1) {
+        //         printf("Couldn't create the new offset!\n");
+        //         close_threads(head, global_cycle);
+        //         return NULL;
+        //     }
+        //     head = add_node(head, length, 2, 9, Offsets + Offsets_len - 1);
+        //     add_data(length - 1, global_cycle, 2, 9);
+        //     length++;
+        //     // Los datos 2 (T) y 9 (P) deben ser extraidos del GUI
+        //     multiple = lcm(head);
+        //     pthread_t* threads_temp = (pthread_t*)realloc(threads, length);
+        //     if (threads_temp == NULL) { 
+        //         printf("Couldn't create the new thread!\n");
+        //         close_threads(head, global_cycle);
+        //         return NULL;
+        //     } 
+        //     else {
+        //         threads = threads_temp;
+        //     }
+        //     node_p* temp = head;
+        //     while (temp->Id != length - 1) {
+        //         temp = temp->Next_Process;
+        //     }
+        //     pthread_create(threads + length - 1, NULL, exec_thread, (void *) temp);
+        //     manual_insert = 0;
+        // }
 
         if (global_cycle == 6 && manual_finish == -1) {
             manual_finish = 0; // Borrar
@@ -260,7 +259,7 @@ void* planning (){
             printf("skipped!\n");
             current_cycle++;
             global_cycle++;
-            usleep(100000);
+            usleep(time_pause);
             add_executed_cycle(-1, 1);
         }
     }

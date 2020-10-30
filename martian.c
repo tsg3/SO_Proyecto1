@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "movements.c"
 
 pthread_cond_t cond_turn = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_exec = PTHREAD_COND_INITIALIZER;
@@ -17,19 +18,9 @@ int executed;
 
 int manual_finish;
 
-typedef struct Process
+node_p *add_node(node_p *head, int id, int energy, int period, int *offset, float pos_x, float pos_y, char direction)
 {
-    int Id;
-    int Max_Energy;
-    int Current_Energy;
-    int Period;
-    struct Process *Next_Process;
-    int *Offset;
-    int State;
-} node_p;
 
-node_p *add_node(node_p *head, int id, int energy, int period, int *offset)
-{
     if (head == NULL)
     {
         head = (node_p *)malloc(sizeof(node_p));
@@ -40,6 +31,9 @@ node_p *add_node(node_p *head, int id, int energy, int period, int *offset)
         head->Next_Process = NULL;
         head->Offset = offset;
         head->State = 1;
+        head->pos_x = pos_x;
+        head->pos_y = pos_y;
+        head->direction = direction;
         return head;
     }
     else if (period <= head->Period)
@@ -52,6 +46,9 @@ node_p *add_node(node_p *head, int id, int energy, int period, int *offset)
         new_head->Next_Process = head;
         new_head->Offset = offset;
         new_head->State = 1;
+        new_head->pos_x = pos_x;
+        new_head->pos_y = pos_y;
+        new_head->direction = direction;
         return new_head;
     }
     else
@@ -73,12 +70,16 @@ node_p *add_node(node_p *head, int id, int energy, int period, int *offset)
         new_node->Next_Process = temp->Next_Process;
         new_node->Offset = offset;
         new_node->State = 1;
+        new_node->pos_x = pos_x;
+        new_node->pos_y = pos_y;
+        new_node->direction = direction;
         temp->Next_Process = new_node;
         return head;
     }
 }
 
-void print_list(node_p *head) {
+void print_list(node_p *head)
+{
     node_p *temp = head;
     printf("[");
     while (temp != NULL)
@@ -92,6 +93,10 @@ void print_list(node_p *head) {
         }
     }
     printf("]\n");
+}
+
+void temp(node_p *martian)
+{
 }
 
 void *exec_thread(void *vargp)
@@ -117,9 +122,16 @@ void *exec_thread(void *vargp)
         int temp_cycles = cycles;
         while (cycles > 0)
         {
-            proc->Current_Energy--;
-            cycles--;
-            usleep(100000);
+            make_movement(proc);
+
+            if (steps == 0)
+            {
+                proc->direction = 'c';
+                proc->Current_Energy--;
+                cycles--;
+                usleep(time_pause);
+                steps = 8;
+            }
         }
         if (manual_finish == proc->Id)
         {
