@@ -21,8 +21,8 @@ int current_x;
 int current_y;
 int window_height;
 int window_width;
-char current_window;  // m: menu, g: gaming, r: report, a: editing automatic
-char game_mode; // a: automatic, m: manual
+char current_window; // m: menu, g: gaming, r: report, a: editing automatic
+char game_mode;      // a: automatic, m: manual
 
 // New marcians parameters
 int new_energy;
@@ -47,7 +47,7 @@ const char r_l_text[] = "Right / Lefts Keys";
 const char finish_text[] = "Press X to finish simulation";
 const char exit_text[] = "Press X to exit";
 
-float time_pause = 0.3;
+int time_pause = 500000;
 
 // Running game variable
 bool running;
@@ -62,7 +62,21 @@ typedef struct MARCIAN
     char direction;
 } MARCIAN;
 
-MARCIAN marcians[10];
+typedef struct Process
+{
+    int Id;
+    int Max_Energy;
+    int Current_Energy;
+    int Period;
+    struct Process *Next_Process;
+    int *Offset;
+    int State;
+    float pos_x;
+    float pos_y;
+    char direction;
+} node_p;
+
+// MARCIAN marcians[10];
 
 char addresses[4] = {'u', 'd', 'l', 'r'};
 
@@ -87,7 +101,7 @@ char maze[17][17] = {
 
 // Planner
 
-node_p* head;
-int* Offsets;
+node_p *head;
+int *Offsets;
 int Offsets_len;
 int global_cycle;

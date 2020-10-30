@@ -1,4 +1,4 @@
-#include "movements.c"
+#include "planner.c"
 
 void draw_background_game()
 {
@@ -56,9 +56,11 @@ void draw_background_game()
 
 void draw_marcians()
 {
-    for (int i = 0; i < length; i++)
+    node_p *martian = head;
+    while (martian) 
     {
-        al_draw_scaled_bitmap(marcian_image, 0, 0, imageWidth, imageHeight, marcians[i].pos_x, marcians[i].pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
+        al_draw_scaled_bitmap(marcian_image, 0, 0, imageWidth, imageHeight, martian->pos_x, martian->pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
+        martian = martian->Next_Process;
     }
 }
 
@@ -151,7 +153,7 @@ void add_new_marcian()
     {
         if (new_energy < new_period)
         {
-            marcians[length] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = new_energy, .period = new_period, .direction = 'c'};
+            // marcians[length] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = new_energy, .period = new_period, .direction = 'c'};
             printf("New marcian added with energy: %d and period: %d\n", new_energy, new_period);
 
             if (Offsets == NULL) {
@@ -169,7 +171,7 @@ void add_new_marcian()
                     return;
                 }
             }
-            head = add_node(head, length, new_energy, new_period, Offsets + Offsets_len - 1);
+            head = add_node(head, length, new_energy, new_period, Offsets + Offsets_len - 1, 32, 32, 'c');
             add_data(length, global_cycle, new_energy, new_period);
             length++;
             // print_list(head);
@@ -332,30 +334,7 @@ int main()
             }
             else {
                 draw_background_game();
-
-                if (length > 0)
-                {
-                    make_movement(&marcians[current_marcian]);
-
-                    draw_marcians(marcian_image);
-
-                    // Validaciones temporales
-                    if (steps == 0)
-                    {
-                        marcians[current_marcian].energy--;
-                        marcians[current_marcian].direction = 'c';
-                        steps = 8;
-                    }
-                    if (marcians[current_marcian].energy == 0)
-                    {
-                        marcians[current_marcian].energy = 4;
-                        current_marcian++;
-                        if (current_marcian >= length)
-                            current_marcian = 0;
-                    }
-                    if (current_marcian == length)
-                        current_marcian = 0;
-                }
+                draw_marcians();
             }
         }
 

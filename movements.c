@@ -1,8 +1,8 @@
-#include "planner.c"
+#include "report.c"
 
-void move_marcian(MARCIAN *marcian)
+void move_marcian(node_p *marcian)
 {
-    if (marcian->energy > 0 && steps > 0)
+    if (marcian->Current_Energy > 0 && steps > 0)
     {
         int pos_x = marcian->pos_x / 32;
         int pos_y = marcian->pos_y / 32;
@@ -29,11 +29,10 @@ void move_marcian(MARCIAN *marcian)
         default:
             break;
         }
-        // sleep(time_pause);
     }
 }
 
-bool check_movement(MARCIAN *marcian, char movement)
+bool check_movement(node_p *marcian, char movement)
 {
     int pos_y;
     int pos_x;
@@ -91,7 +90,7 @@ bool check_movement(MARCIAN *marcian, char movement)
     }
 }
 
-void set_address(MARCIAN *marcian)
+void set_address(node_p *marcian)
 {
     srand(time(NULL));
     int pos;
@@ -109,7 +108,7 @@ void set_address(MARCIAN *marcian)
     }
 }
 
-void make_movement(MARCIAN *marcian)
+void make_movement(node_p *marcian)
 {
     int pos_x = marcian->pos_x / 32;
     int pos_y = marcian->pos_y / 32;
