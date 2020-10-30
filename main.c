@@ -160,6 +160,7 @@ void add_new_marcian()
                 Offsets = (int*)malloc(sizeof(int));
                 *Offsets = 0;
                 Offsets_len++;
+                current_cycle = 0;
             }
             else if (game_mode == 'm') {
                 update_offsets(current_cycle);
@@ -174,7 +175,6 @@ void add_new_marcian()
             head = add_node(head, length, new_energy, new_period, Offsets + Offsets_len - 1, 32, 32, 'c');
             add_data(length, global_cycle, new_energy, new_period);
             length++;
-            // print_list(head);
 
             if (game_mode == 'm') {
                 multiple = lcm(head);
@@ -360,10 +360,6 @@ int main()
     al_destroy_event_queue(queue);
 
     if (current_window == 'r') {
-        /* Show report */
-
-        mode_r = mode;
-
         show_report();
     }
 
