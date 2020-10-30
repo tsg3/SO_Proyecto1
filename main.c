@@ -1,5 +1,8 @@
 #include "planner.c"
 
+const char mode_text_guide[] = "Scheduling mode:";
+const char add_marcian_a[] = "Scheduling mode:";
+
 void draw_background_game()
 {
     for (int i = 0; i < 17; i++)
@@ -57,48 +60,56 @@ void draw_background_game()
 void draw_marcians()
 {
     node_p *martian = head;
-    while (martian) 
+    while (martian)
     {
         al_draw_scaled_bitmap(marcian_image, 0, 0, imageWidth, imageHeight, martian->pos_x, martian->pos_y, imageWidth * 0.5, imageHeight * 0.5, 0);
         martian = martian->Next_Process;
     }
 }
 
-void draw_menu()
+void draw_menu_activities()
 {
-
     float x_center = window_width / 2.0f;
+    float y_center = window_height / 2.0f;
+    if (current_window == 'm')
+    {
 
-    al_draw_bitmap(marcian_image, x_center - 32, window_height / 2.0f - 20 * 4 - 72, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(title), window_height / 2.0f - 20 * 4, 0, title);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(a_mode_guide), window_height / 2.0f, 0, a_mode_guide);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(m_mode_guide), window_height / 2.0f + 10 * 4, 0, m_mode_guide);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(exit_text), window_height / 2.0f + 30 * 4 + 55, 0, exit_text);
-}
+        al_draw_bitmap(marcian_image, x_center - 32, window_height / 2.0f - 20 * 4 - 72, 0);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(title), y_center - 20 * 4, 0, title);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(a_mode_guide), y_center, 0, a_mode_guide);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(m_mode_guide), y_center + 10 * 4, 0, m_mode_guide);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(r_l_text), y_center + 30 * 4 + 20, 0, r_l_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(mode_text_guide) - 30, y_center + 30 * 4, 0, mode_text_guide);
+        if (mode == 0)
+            al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof("<< RMS >>") + 75, y_center + 30 * 4, 0, "<< RMS >>");
+        else
+            al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof("<< EDF >>") + 75, y_center + 30 * 4, 0, "<< EDF >>");
+    }
+    else if (current_window == 'a')
+    {
+        char energy_number[3];
+        char period_number[3];
+        sprintf(energy_number, "%d", new_energy);
+        sprintf(period_number, "%d", new_period);
 
-void draw_automatic_menu()
-{
-    char energy_number[3];
-    char period_number[3];
-    float x_center = window_width / 2.0f;
-    sprintf(energy_number, "%d", new_energy);
-    sprintf(period_number, "%d", new_period);
+        al_draw_bitmap(marcian_image, window_width / 2.0f - 32, window_height / 2.0f - 20 * 4 - 72, 0);
+        al_draw_text(font, al_map_rgb(255, 255, 255), window_width / 2.0f - 4 * sizeof(add_marcian_text), window_height / 2.0f - 20 * 4, 0, add_marcian_text);
 
-    al_draw_bitmap(marcian_image, window_width / 2.0f - 32, window_height / 2.0f - 20 * 4 - 72, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), window_width / 2.0f - 4 * sizeof(add_marcian_text), window_height / 2.0f - 20 * 4, 0, add_marcian_text);
+        // Guide
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(modify_values_text), window_height / 2.0f + 30 * 4 - 15, 0, modify_values_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(up_down_text), window_height / 2.0f + 30 * 4+10, 0, up_down_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(r_l_text), window_height / 2.0f + 30 * 4, 0, r_l_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(start_space), window_height / 2.0f + 30 * 4 + 70, 0, start_space);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(add_a), window_height / 2.0f + 30 * 4 + 55, 0, add_a);
 
-    // Guide
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(modify_values_text), window_height / 2.0f + 30 * 4, 0, modify_values_text);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(up_down_text), window_height / 2.0f + 30 * 4 + 10, 0, up_down_text);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(r_l_text), window_height / 2.0f + 30 * 4 + 20, 0, r_l_text);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(start_space), window_height / 2.0f + 30 * 4 + 40, 0, start_space);
+        // Energy and period text
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(energy_text) - 10, window_height / 2.0f, 0, energy_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(energy_number) + 10, window_height / 2.0f, 0, energy_number);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(period_text) - 10, window_height / 2.0f + 10 * 4, 0, period_text);
+        al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(period_number) + 10, window_height / 2.0f + 10 * 4, 0, period_number);
+    }
 
-    // Energy and period text
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(energy_text) - 10, window_height / 2.0f, 0, energy_text);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(energy_number) + 10, window_height / 2.0f, 0, energy_number);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(period_text) - 10, window_height / 2.0f + 10 * 4, 0, period_text);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(exit_text), window_height / 2.0f + 30 * 4 + 55, 0, exit_text);
-    al_draw_text(font, al_map_rgb(255, 255, 255), x_center + 4 * sizeof(period_number) + 10, window_height / 2.0f + 10 * 4, 0, period_number);
+    al_draw_text(font, al_map_rgb(255, 255, 255), x_center - 4 * sizeof(exit_text), window_height / 2.0f + 30 * 4 + 85, 0, exit_text);
 }
 
 void initialize_variables()
@@ -108,6 +119,7 @@ void initialize_variables()
     window_height = 544;
     window_width = 832;
     length = 0;
+    mode = 0;
 
     timer = al_create_timer(1.0 / 30.0);
     queue = al_create_event_queue();
@@ -156,15 +168,19 @@ void add_new_marcian()
             // marcians[length] = (MARCIAN){.id = 1, .pos_x = 32, .pos_y = 32, .energy = new_energy, .period = new_period, .direction = 'c'};
             printf("New marcian added with energy: %d and period: %d\n", new_energy, new_period);
 
-            if (Offsets == NULL) {
-                Offsets = (int*)malloc(sizeof(int));
+            if (Offsets == NULL)
+            {
+                Offsets = (int *)malloc(sizeof(int));
                 *Offsets = 0;
                 Offsets_len++;
+                current_cycle = 0;
             }
-            else if (game_mode == 'm') {
+            else if (game_mode == 'm')
+            {
                 update_offsets(current_cycle);
                 current_cycle = 0;
-                if (create_offset() == -1) {
+                if (create_offset() == -1)
+                {
                     printf("Couldn't create the new offset!\n");
                     keep_execution = false;
                     running = false;
@@ -174,25 +190,28 @@ void add_new_marcian()
             head = add_node(head, length, new_energy, new_period, Offsets + Offsets_len - 1, 32, 32, 'c');
             add_data(length, global_cycle, new_energy, new_period);
             length++;
-            // print_list(head);
 
-            if (game_mode == 'm') {
+            if (game_mode == 'm')
+            {
                 multiple = lcm(head);
-                pthread_t* threads_temp = (pthread_t*)realloc(threads, length);
-                if (threads_temp == NULL) { 
+                pthread_t *threads_temp = (pthread_t *)realloc(threads, length);
+                if (threads_temp == NULL)
+                {
                     printf("Couldn't create the new thread!\n");
                     keep_execution = false;
                     running = false;
                     return;
-                } 
-                else {
+                }
+                else
+                {
                     threads = threads_temp;
                 }
-                node_p* temp = head;
-                while (temp->Id != length - 1) {
+                node_p *temp = head;
+                while (temp->Id != length - 1)
+                {
                     temp = temp->Next_Process;
                 }
-                pthread_create(threads + length - 1, NULL, exec_thread, (void *) temp);
+                pthread_create(threads + length - 1, NULL, exec_thread, (void *)temp);
             }
 
             new_period = 0;
@@ -212,7 +231,8 @@ void validate_key()
         switch (event.keyboard.keycode)
         {
         case ALLEGRO_KEY_X:
-            if (current_window == 'g') {
+            if (current_window == 'g')
+            {
                 current_window = 'r';
                 running = false;
                 keep_execution = false;
@@ -273,12 +293,34 @@ void validate_key()
             {
                 new_energy++;
             }
+            else if (current_window == 'm')
+            {
+                if (mode == 0)
+                {
+                    mode = 1;
+                }
+                else
+                {
+                    mode = 0;
+                }
+            }
             break;
         case ALLEGRO_KEY_LEFT:
             if ((game_mode == 'm' && current_window == 'g') || current_window == 'a')
             {
                 if (new_energy > 0)
                     new_energy--;
+            }
+            else if (current_window == 'm')
+            {
+                if (mode == 0)
+                {
+                    mode = 1;
+                }
+                else
+                {
+                    mode = 0;
+                }
             }
             break;
         default:
@@ -318,21 +360,19 @@ int main()
 
         validate_key();
 
-        if (current_window == 'm')
-            draw_menu();
+        if (current_window == 'm' || current_window == 'a')
+            draw_menu_activities();
 
-        else if (current_window == 'a')
-        {
-            draw_automatic_menu();
-        }
         else if (current_window == 'g')
         {
 
-            if (!keep_execution) {
+            if (!keep_execution)
+            {
                 current_window = 'r';
                 running = false;
             }
-            else {
+            else
+            {
                 draw_background_game();
                 draw_marcians();
             }
@@ -341,12 +381,14 @@ int main()
         al_flip_display();
     }
 
-    if (current_window == 'r') {
+    if (current_window == 'r')
+    {
         /* Join threads */
 
         pthread_join(*planner, NULL);
-        
-        for (int i = 0; i < length; i++) {
+
+        for (int i = 0; i < length; i++)
+        {
             pthread_join(*(threads + i), NULL);
         }
     }
@@ -360,10 +402,6 @@ int main()
     al_destroy_event_queue(queue);
 
     if (current_window == 'r') {
-        /* Show report */
-
-        mode_r = mode;
-
         show_report();
     }
 
