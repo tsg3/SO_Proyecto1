@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
 #include "movements.c"
 
 node_p *add_node(node_p *head, int id, int energy, int period, int *offset, float pos_x, float pos_y, char direction)
@@ -104,16 +100,19 @@ void *exec_thread(void *vargp)
         int temp_cycles = cycles;
         while (cycles > 0)
         {
+            if (!keep_execution){
+                break;
+            }
             make_movement(proc);
 
-            if (steps == 0)
-            {
-                proc->direction = 'c';
+            // if (steps == 0)
+            // {
+                // proc->direction = 'c';
                 proc->Current_Energy--;
                 cycles--;
                 usleep(time_pause);
-                steps = 8;
-            }
+            //     steps = 8;
+            // }
         }
         printf("T%d executed %d cycles!\n", proc->Id, temp_cycles);
         pthread_mutex_unlock(&lock_turn);

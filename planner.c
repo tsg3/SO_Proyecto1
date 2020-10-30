@@ -224,7 +224,7 @@ void start_threads() {
 
     // Random
 
-    srand(time(NULL)); 
+    // srand(time(NULL)); 
 
     // Planner and threads
 

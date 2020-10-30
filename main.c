@@ -348,6 +348,7 @@ void validate_key()
 
 int main()
 {
+    srand(time(NULL)); 
     al_init();
     al_install_keyboard();
 
