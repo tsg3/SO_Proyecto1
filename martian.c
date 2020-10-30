@@ -4,20 +4,6 @@
 #include <pthread.h>
 #include "movements.c"
 
-pthread_cond_t cond_turn = PTHREAD_COND_INITIALIZER;
-pthread_cond_t cond_exec = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t lock_exec = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t lock_turn = PTHREAD_MUTEX_INITIALIZER;
-
-int turn;
-int current_cycle;
-int cycles;
-int finished;
-int multiple;
-int executed;
-
-int manual_finish;
-
 node_p *add_node(node_p *head, int id, int energy, int period, int *offset, float pos_x, float pos_y, char direction)
 {
 
@@ -95,10 +81,6 @@ void print_list(node_p *head)
     printf("]\n");
 }
 
-void temp(node_p *martian)
-{
-}
-
 void *exec_thread(void *vargp)
 {
     node_p *proc = (node_p *)vargp;
@@ -132,11 +114,6 @@ void *exec_thread(void *vargp)
                 usleep(time_pause);
                 steps = 8;
             }
-        }
-        if (manual_finish == proc->Id)
-        {
-            manual_finish = -1;
-            proc->State = 0;
         }
         printf("T%d executed %d cycles!\n", proc->Id, temp_cycles);
         pthread_mutex_unlock(&lock_turn);

@@ -1,16 +1,5 @@
 #include "martian.c"
 
-//#define TIME 100 // Solo para testear
-#define N 3 // Solo para testear
-
-int mode;
-int manual_insert;
-
-bool keep_execution = true;
-
-pthread_t* planner; 
-pthread_t* threads;
-
 int lcm(node_p* head) { 
     if (head == NULL) {
         return 0;
@@ -176,42 +165,6 @@ void* planning (){
         if (current_cycle == multiple) {
             current_cycle = 0;
         }
-
-        // if (global_cycle == 6 && manual_insert == 1) { 
-        //     /* Simula el efecto de un proceso nuevo manual, pero fijado en 6 
-        //     (no deberia de estarlo) */
-        //     update_offsets(current_cycle);
-        //     current_cycle = 0;
-        //     if (create_offset() == -1) {
-        //         printf("Couldn't create the new offset!\n");
-        //         close_threads(head, global_cycle);
-        //         return NULL;
-        //     }
-        //     head = add_node(head, length, 2, 9, Offsets + Offsets_len - 1);
-        //     add_data(length - 1, global_cycle, 2, 9);
-        //     length++;
-        //     // Los datos 2 (T) y 9 (P) deben ser extraidos del GUI
-        //     multiple = lcm(head);
-        //     pthread_t* threads_temp = (pthread_t*)realloc(threads, length);
-        //     if (threads_temp == NULL) { 
-        //         printf("Couldn't create the new thread!\n");
-        //         close_threads(head, global_cycle);
-        //         return NULL;
-        //     } 
-        //     else {
-        //         threads = threads_temp;
-        //     }
-        //     node_p* temp = head;
-        //     while (temp->Id != length - 1) {
-        //         temp = temp->Next_Process;
-        //     }
-        //     pthread_create(threads + length - 1, NULL, exec_thread, (void *) temp);
-        //     manual_insert = 0;
-        // }
-
-        if (global_cycle == 6 && manual_finish == -1) {
-            manual_finish = 0; // Borrar
-        }
         
         if (regen_energy(head) == -1) {
             printf("Couldn't find a way to schedule the processes!\n");
@@ -229,7 +182,7 @@ void* planning (){
 
         int temp_turn = turn;
         int temp_cycle = cycles;
-        // print_list(head);
+        
         printf("Turn %d: ", current_cycle);
 
         if (turn != -1) {
@@ -269,41 +222,26 @@ void* planning (){
 
 void start_threads() {
 
-    /* INIT */
+    // Random
 
-    srand(time(NULL)); // Para los random de report
+    srand(time(NULL)); 
 
-    // node_p* head = NULL;
-    // length = 0;
-    // // int times[] = {1, 2, 6}; 
-    // // int periods[] = {6, 9, 18}; 
-    // Offsets = (int*)malloc(sizeof(int));
-    // *Offsets = 0;
-    // Offsets_len = 1;
+    // Planner and threads
 
-    // for (int i = 0; i < N; i++) { 
-    //     head = add_node(head, i, times[i], periods[i], Offsets);
-    //     add_data(i, 0, times[i], periods[i]);
-    // }
-    // proc_len = length;
-
-    /* Planner and threads */
     planner = (pthread_t*)malloc(sizeof(pthread_t));
     threads = (pthread_t*)malloc(sizeof(pthread_t) * length);
 
-    /* Global variables */
+    // Global variables
 
-    turn = -1;
-    finished = 0;
-    cycles = 0;
     multiple = lcm(head);
-    executed = 0;
-    current_cycle = 0;
-    mode = 0; // Input del usuario
-    manual_insert = 0; // Borrar
-    manual_finish = -2; // Borrar
+    mode = 0; // Borrar
 
-    /* Start threads */
+    // Report Variables
+
+    Cycles_Head = NULL;
+    Cycles_Count = 0;
+
+    // Start threads (automatic mode)
     
     node_p* temp = head;
     for (int i = 0; i < length; i++) { 
@@ -313,9 +251,3 @@ void start_threads() {
     
     pthread_create(planner, NULL, planning, NULL);
 }
-
-/*
-gcc planner.c -o planner -lpthread $(pkg-config allegro-5 allegro_font-5 --libs --cflags)
-
-./planner
-*/

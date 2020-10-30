@@ -1,25 +1,5 @@
 #include "standard.h"
 
-typedef struct Cycles {
-    int Id_Proc;
-    int Exec_Cycles;
-    struct Cycles* Next_Cycle;
-} node_c;
-typedef struct ProcData {
-    int Id_Proc;
-    int R;
-    int G;
-    int B;
-    int Start;
-    int Time;
-    int End;
-    int Period;
-    struct ProcData* Next_Data;
-} proc_data;
-node_c* Cycles_Head = NULL;
-proc_data* Data_Head = NULL;
-int Cycles_Count = 0;
-
 int generate_random() {
     return rand() % 256; 
 }
@@ -73,12 +53,12 @@ void set_end (int id, int end) {
 }
 
 void add_executed_cycle(int id, int cycles) {
-    Cycles_Count += cycles;
     if (Cycles_Head == NULL) {
         Cycles_Head = (node_c*)malloc(sizeof(node_c));
         Cycles_Head->Id_Proc = id;
         Cycles_Head->Exec_Cycles = cycles;
         Cycles_Head->Next_Cycle = NULL;
+        Cycles_Count = cycles;
     }
     else {
         node_c* temp = Cycles_Head;
@@ -90,21 +70,13 @@ void add_executed_cycle(int id, int cycles) {
         new_node->Exec_Cycles = cycles;
         new_node->Next_Cycle = NULL;
         temp->Next_Cycle = new_node;
+        Cycles_Count += cycles;
     }
 }
 
-ALLEGRO_FONT* font;
-int mode_r;
-int slider = 0;
-int slider_state = 0;
-int lines;
-float scalar = 1.0;
-int scalar_state = 0;
-float total_length;
-
 void draw_window() {
     al_clear_to_color(al_map_rgb(255, 255, 255));
-    total_length = ((float) lines - 1.0) * 60 * scalar;
+    int total_length = ((float) lines - 1.0) * 60 * scalar;
     if (slider_state == 1 && total_length - slider > 480) {
         slider += 2;
     }
@@ -126,7 +98,7 @@ void draw_window() {
         sprintf(str, "%d", i);
         al_draw_line(120 + i * 60 * scalar - slider, 30, 
             120 + i * 60 * scalar - slider, 60 + length * 30, al_map_rgb(0, 0, 0), 1);
-        al_draw_text(font, al_map_rgb(0, 0, 0), 
+        al_draw_text(font_2, al_map_rgb(0, 0, 0), 
             120 + i * 60 * scalar - slider, 60 + length * 30, 0, str);
         i++;
     }
@@ -179,7 +151,7 @@ void draw_window() {
         temp = temp->Next_Cycle;
     }
 
-    al_draw_text(font, al_map_rgb(0, 0, 0), 306, 90 + length * 30, 0, "Time (s)");
+    al_draw_text(font_2, al_map_rgb(0, 0, 0), 306, 90 + length * 30, 0, "Time (s)");
 
     al_draw_filled_rectangle(0, 0, 119, 210, al_map_rgb(255, 255, 255));
 
@@ -188,36 +160,30 @@ void draw_window() {
         strcpy(temp_title, "Marciano \0");
         sprintf(str, "%d", i + 1);
         strcat(temp_title, str);
-        al_draw_text(font, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, temp_title);
+        al_draw_text(font_2, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, temp_title);
         i++;
     }
 
-    if (mode_r == 0) {
-        al_draw_text(font, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, "RMS");
+    if (mode == 0) {
+        al_draw_text(font_2, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, "RMS");
     }
     else {
-        al_draw_text(font, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, "EDF");
+        al_draw_text(font_2, al_map_rgb(0, 0, 0), 30, 45 + i * 30, 0, "EDF");
     }
 
     al_flip_display();
 }
 
 void show_report() {
-    /* Eliminar */
-    // srand(time(NULL));
-    /*int cycles_ids[] = {0, 1, 2, 0, 2, 1, 2, 0, -1, -1, -1, -1, -1, 0, 1};
-    int cycles_num[] = {1, 2, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2};
-    for (int i = 0; i < 15; i++) {
-        add_executed_cycle(cycles_ids[i], cycles_num[i]);
-    }*/
-
     lines = Cycles_Count;
     while (lines % 10 != 0) {
         lines++;
     }
     lines = lines / 10 + 1;
-
-    /*          */
+    slider = 0;
+    slider_state = 0;
+    scalar = 1.0;
+    scalar_state = 0;
 
     al_init();
     al_install_keyboard();
@@ -227,7 +193,7 @@ void show_report() {
     ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
     ALLEGRO_DISPLAY* disp = al_create_display(640, 480);
 
-    font = al_create_builtin_font();
+    font_2 = al_create_builtin_font();
 
     al_register_event_source(queue, al_get_keyboard_event_source());
     al_register_event_source(queue, al_get_display_event_source(disp));
@@ -287,7 +253,7 @@ void show_report() {
         }
     }
 
-    al_destroy_font(font);
+    al_destroy_font(font_2);
     al_destroy_display(disp);
     al_destroy_timer(timer);
     al_destroy_event_queue(queue);

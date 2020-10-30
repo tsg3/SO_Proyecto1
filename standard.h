@@ -101,7 +101,58 @@ char maze[17][17] = {
 
 // Planner
 
+int global_cycle;
+int mode;
+bool keep_execution = true;
+pthread_t* planner; 
+int finished = 0;
+int turn = -1;
+int current_cycle = 0;
+int multiple;
+
+// Martians
+
 node_p *head;
 int *Offsets;
 int Offsets_len;
-int global_cycle;
+pthread_t* threads;
+int executed = 0;
+int cycles = 0;
+
+// Locks and conditions
+
+pthread_cond_t cond_turn = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_exec = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t lock_exec = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock_turn = PTHREAD_MUTEX_INITIALIZER;
+
+// Report
+
+typedef struct Cycles {
+    int Id_Proc;
+    int Exec_Cycles;
+    struct Cycles* Next_Cycle;
+} node_c;
+
+typedef struct ProcData {
+    int Id_Proc;
+    int R;
+    int G;
+    int B;
+    int Start;
+    int Time;
+    int End;
+    int Period;
+    struct ProcData* Next_Data;
+} proc_data;
+
+node_c* Cycles_Head;
+proc_data* Data_Head = NULL;
+int Cycles_Count;
+
+ALLEGRO_FONT* font_2;
+int slider;
+int slider_state;
+int lines;
+float scalar;
+int scalar_state;
